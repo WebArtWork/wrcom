@@ -1,13 +1,15 @@
 import React from 'react'
 
-import { ExampleComponent, UserList} from 'wrcom'
+import {HttpService, RenderService, HashService, CoreService} from 'wrcom'
 import 'wrcom/dist/index.css'
 
 const App = () => {
-  return <div>
-	<ExampleComponent />
-	<UserList/>
-  </div>
+ 	return <div>
+	 	<HttpService/>
+	 	<RenderService/>
+	 	<HashService/>
+	 	<CoreService/>
+ 	 </div>
 }
 
 export default App
