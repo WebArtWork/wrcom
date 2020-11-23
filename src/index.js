@@ -4,7 +4,7 @@ import {HTTP} from './services/http.service'
 import {Render} from './services/render.service'
 import {Hash_Service} from './services/hash.service'
 import {Core_Service} from './services/core.service'
-import {Store_Service} from './services/store_service'
+import {Store_Service} from './services/store.service'
 
 export const HttpService =()=>{
 	return <HTTP />

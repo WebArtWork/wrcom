@@ -387,6 +387,12 @@ var Store_Service = function Store_Service(config) {
       }, function (error) {}, function () {});
     }
   });
+
+  var sort = function sort(arr, _sort) {
+    if (!Array.isArray(arr)) return;
+    if (typeof _sort == 'string' && typeof window.store[_sort] == 'function') arr.sort(window.store[_sort]);else if (typeof _sort == 'function') arr.sort(_sort);
+  };
+
   window.store = {
     set: function (_set) {
       function set(_x, _x2) {
@@ -556,10 +562,114 @@ var Store_Service = function Store_Service(config) {
       });
 
       if (add) _data[type].all.push(_data[type].by_id[doc[_id]]);
+      if (_data[type].sort) sort(_data[type].all, _data[type].sort);
+
+      if (_data[type].opts.query) {
+        for (var key in _data[type].opts.query) {
+          var query = _data[type].opts.query[key];
+          if (typeof query.ignore == 'function' && query.ignore(doc)) continue;
+          if (typeof query.allow == 'function' && !query.allow(doc)) continue;
+
+          if (!_data[type].query[key]) {
+            _data[type].query[key] = [];
+          }
+
+          add = true;
+
+          _data[type].query.forEach(function (selected) {
+            if (selected[_id] == doc[_id]) add = false;
+          });
+
+          if (add) _data[type].query[key].push(_data[type].by_id[doc[_id]]);
+          if (query.sort) sort(_data[type].query[key], query.sort);
+        }
+      }
+
+      if (_data[type].opts.groups) {
+        var _loop = function _loop(_key) {
+          var groups = _data[type].opts.groups[_key];
+          if (typeof groups.ignore == 'function' && groups.ignore(doc)) return "continue";
+          if (typeof groups.allow == 'function' && !groups.allow(doc)) return "continue";
+
+          if (!_data[type].groups[_key]) {
+            _data[type].groups[_key] = {};
+          }
+
+          var set = function set(field) {
+            if (!field) return;
+
+            if (!Array.isArray(_data[type].groups[_key][field])) {
+              _data[type].groups[_key][field] = [];
+            }
+
+            add = true;
+
+            _data[type].groups.forEach(function (selected) {
+              if (selected[_id] == doc[_id]) add = false;
+            });
+
+            if (add) _data[type].groups[_key][field].push(_data[type].by_id[doc[_id]]);
+            if (groups.sort) sort(_data[type].groups[_key][field], groups.sort);
+          };
+
+          set(groups.field(doc, function (field) {
+            set(field);
+          }));
+        };
+
+        for (var _key in _data[type].opts.groups) {
+          var _ret = _loop(_key);
+
+          if (_ret === "continue") continue;
+        }
+      }
     },
     _initialize: function _initialize(collection) {
       if (!collection.all) collection.all = [];
+      if (!collection.opts) collection.opts = {};
       if (!collection.by_id) collection.by_id = {};
+      if (!collection.groups) collection.groups = {};
+      if (!collection.query) collection.query = [];
+
+      if (collection.opts.query) {
+        for (var key in collection.opts.query) {
+          if (typeof collection.opts.query[key] == 'function') {
+            collection.opts.query[key] = {
+              allow: collection.opts.query[key]
+            };
+          }
+        }
+      }
+
+      if (collection.opts.groups) {
+        if (typeof collection.opts.groups == 'string') {
+          collection.opts.groups = collection.opts.groups.split(' ');
+        }
+
+        var _loop2 = function _loop2(_key2) {
+          if (typeof collection.opts.groups[_key2] == 'boolean' && collection.opts.groups[_key2]) {
+            collection.opts.groups[_key2] = {
+              field: function field(doc) {
+                return doc[_key2];
+              }
+            };
+          }
+
+          if (typeof collection.opts.groups[_key2] != 'object' || typeof collection.opts.groups[_key2].field != 'function') {
+            delete collection.opts.groups[_key2];
+            return "continue";
+          }
+
+          collection.groups[_key2] = {};
+        };
+
+        for (var _key2 in collection.opts.groups) {
+          var _ret2 = _loop2(_key2);
+
+          if (_ret2 === "continue") continue;
+        }
+      }
+
       _data[collection.name] = collection;
       get(collection.name + '_docs', function (docs) {
         if (!docs) return;
@@ -570,8 +680,14 @@ var Store_Service = function Store_Service(config) {
         }
       });
     },
-    get_docs: function get_docs(type, doc) {
+    all: function all(type, doc) {
       return _data[type].all;
+    },
+    query: function query(type, doc) {
+      return _data[type].query;
+    },
+    groups: function groups(type, doc) {
+      return _data[type].groups;
     },
     get_doc: function get_doc(type, _id) {
       if (!_data[type].by_id[_id]) {

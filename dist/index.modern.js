@@ -294,6 +294,12 @@ const Store_Service = (config = {}) => {
       }, error => {}, () => {});
     }
   });
+
+  const sort = function (arr, sort) {
+    if (!Array.isArray(arr)) return;
+    if (typeof sort == 'string' && typeof window.store[sort] == 'function') arr.sort(window.store[sort]);else if (typeof sort == 'function') arr.sort(sort);
+  };
+
   window.store = {
     set: (hold, value, cb = () => {}, errCb = () => {}) => {
       if (window.sqlitePlugin) {
@@ -391,10 +397,102 @@ const Store_Service = (config = {}) => {
       });
 
       if (add) _data[type].all.push(_data[type].by_id[doc[_id]]);
+      if (_data[type].sort) sort(_data[type].all, _data[type].sort);
+
+      if (_data[type].opts.query) {
+        for (let key in _data[type].opts.query) {
+          let query = _data[type].opts.query[key];
+          if (typeof query.ignore == 'function' && query.ignore(doc)) continue;
+          if (typeof query.allow == 'function' && !query.allow(doc)) continue;
+
+          if (!_data[type].query[key]) {
+            _data[type].query[key] = [];
+          }
+
+          add = true;
+
+          _data[type].query.forEach(selected => {
+            if (selected[_id] == doc[_id]) add = false;
+          });
+
+          if (add) _data[type].query[key].push(_data[type].by_id[doc[_id]]);
+          if (query.sort) sort(_data[type].query[key], query.sort);
+        }
+      }
+
+      if (_data[type].opts.groups) {
+        for (let key in _data[type].opts.groups) {
+          let groups = _data[type].opts.groups[key];
+          if (typeof groups.ignore == 'function' && groups.ignore(doc)) continue;
+          if (typeof groups.allow == 'function' && !groups.allow(doc)) continue;
+
+          if (!_data[type].groups[key]) {
+            _data[type].groups[key] = {};
+          }
+
+          let set = field => {
+            if (!field) return;
+
+            if (!Array.isArray(_data[type].groups[key][field])) {
+              _data[type].groups[key][field] = [];
+            }
+
+            add = true;
+
+            _data[type].groups.forEach(selected => {
+              if (selected[_id] == doc[_id]) add = false;
+            });
+
+            if (add) _data[type].groups[key][field].push(_data[type].by_id[doc[_id]]);
+            if (groups.sort) sort(_data[type].groups[key][field], groups.sort);
+          };
+
+          set(groups.field(doc, field => {
+            set(field);
+          }));
+        }
+      }
     },
     _initialize: collection => {
       if (!collection.all) collection.all = [];
+      if (!collection.opts) collection.opts = {};
       if (!collection.by_id) collection.by_id = {};
+      if (!collection.groups) collection.groups = {};
+      if (!collection.query) collection.query = [];
+
+      if (collection.opts.query) {
+        for (let key in collection.opts.query) {
+          if (typeof collection.opts.query[key] == 'function') {
+            collection.opts.query[key] = {
+              allow: collection.opts.query[key]
+            };
+          }
+        }
+      }
+
+      if (collection.opts.groups) {
+        if (typeof collection.opts.groups == 'string') {
+          collection.opts.groups = collection.opts.groups.split(' ');
+        }
+
+        for (let key in collection.opts.groups) {
+          if (typeof collection.opts.groups[key] == 'boolean' && collection.opts.groups[key]) {
+            collection.opts.groups[key] = {
+              field: function (doc) {
+                return doc[key];
+              }
+            };
+          }
+
+          if (typeof collection.opts.groups[key] != 'object' || typeof collection.opts.groups[key].field != 'function') {
+            delete collection.opts.groups[key];
+            continue;
+          }
+
+          collection.groups[key] = {};
+        }
+      }
+
       _data[collection.name] = collection;
       get(collection.name + '_docs', docs => {
         if (!docs) return;
@@ -405,8 +503,14 @@ const Store_Service = (config = {}) => {
         }
       });
     },
-    get_docs: (type, doc) => {
+    all: (type, doc) => {
       return _data[type].all;
+    },
+    query: (type, doc) => {
+      return _data[type].query;
+    },
+    groups: (type, doc) => {
+      return _data[type].groups;
     },
     get_doc: (type, _id) => {
       if (!_data[type].by_id[_id]) {
