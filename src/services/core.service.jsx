@@ -6,14 +6,14 @@ export const Core_Service =()=> {
 
 		let host:any = window.location.host.toLowerCase();
 		let	_afterWhile:any = {}; 
-		let cb:any = {};
+		let _cb:any = {};
 		let _ids:any = {};
-		let done_next:any = {};
+		let _done_next:any = {};
 	window.core ={
-		serial_process: (i, arr, callback)=>{
+		_serial_process: (i, arr, callback)=>{
 			if(i>=arr.length) return callback();
 			arr[i](()=>{
-				serial_process(++i, arr, callback);
+				_serial_process(++i, arr, callback);
 			});
 		},
 		set_version:(version='1.0.0')=>{
@@ -38,7 +38,7 @@ export const Core_Service =()=> {
 			}
 		},
 		serial:(arr, callback)=>{
-			serial_process(0, arr, callback);
+			_serial_process(0, arr, callback);
 		},
 		each:(arrOrObj, func, callback, isSerial=false)=>{
 			if(typeof callback == 'boolean'){
@@ -58,7 +58,7 @@ export const Core_Service =()=> {
 							}, i);
 						});
 					}
-					serial_process(0, serialArr, callback);
+					_serial_process(0, serialArr, callback);
 				}else{
 					for (let i = 0; i < arrOrObj.length; i++) {
 						func(arrOrObj[i], function(){
@@ -75,7 +75,7 @@ export const Core_Service =()=> {
 							value: arrOrObj[each],
 							each: each
 						});
-					}this
+					}
 					let counter = arr.length;
 					for (let i = 0; i < arr.length; i++) {
 						serialArr.push(function(next){
@@ -85,7 +85,7 @@ export const Core_Service =()=> {
 							}, i);
 						});
 					}
-					serial_process(0, serialArr, callback);
+					_serial_process(0, serialArr, callback);
 				}else{
 					let counter = 1;
 					for(let each in arrOrObj){
@@ -99,51 +99,51 @@ export const Core_Service =()=> {
 			}else callback();
 		},
 	
-		afterWhile:(doc, cb, time=1000)=>{
+		_afterWhile:(doc, _cb, time=1000)=>{
 			if(typeof doc == 'function'){
-				cb = doc;
+				_cb = doc;
 				doc = 'common';
 			}
 			if(typeof doc == 'string'){
 				if(!_afterWhile[doc]) _afterWhile[doc]={};
 				doc = _afterWhile[doc];
 			}
-			if(typeof cb == 'function' && typeof time == 'number'){
+			if(typeof _cb == 'function' && typeof time == 'number'){
 				clearTimeout(doc.__updateTimeout);
-				doc.__updateTimeout = setTimeout(cb, time);
+				doc.__updateTimeout = setTimeout(_cb, time);
 			}
 		},
 
 		emit:(signal, doc:any={})=>{
-			if(!cb[signal]) cb[signal] = {};
-			for (let each in cb[signal]){
-				if(typeof cb[signal][each] == 'function'){
-					cb[signal][each](doc);
+			if(!_cb[signal]) _cb[signal] = {};
+			for (let each in _cb[signal]){
+				if(typeof _cb[signal][each] == 'function'){
+					_cb[signal][each](doc);
 				}
 			}
 		},
 	
-		on:(signal, cb)=>{
+		on:(signal, _cb)=>{
 			let id = Math.floor(Math.random() * Date.now()) + 1;
-			if(_ids[id]) return on(signal, cb);
+			if(_ids[id]) return on(signal, _cb);
 			_ids[id]=true;
-			if(!cb[signal]) cb[signal] = {};
-			cb[signal][id] = cb;
+			if(!_cb[signal]) _cb[signal] = {};
+			_cb[signal][id] = _cb;
 			return ()=>{
-				cb[signal][id] = null;
+				_cb[signal][id] = null;
 			}
 		},
 		/* once Signal when something is ready */
 	
 		done:(signal)=> {
-			done_next[signal] = true;
+			_done_next[signal] = true;
 		},
-		ready:(signal)=>{ return done_next[signal]; },
-		next:(signal, cb)=> {
-			if(done_next[signal]) cb();
+		ready:(signal)=>{ return _done_next[signal]; },
+		next:(signal, _cb)=> {
+			if(_done_next[signal]) _cb();
 			else {
 				return setTimeout(()=>{
-					next(signal, cb);
+					next(signal, _cb);
 				}, 100);
 			}
 		}

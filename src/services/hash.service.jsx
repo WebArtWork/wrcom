@@ -1,15 +1,15 @@
 import React from 'react'
 
 export  const Hash_Service =()=>{
-	const replaces = [{
+	const _replaces = [{
 		from: '%20',
 		to: ' '
 	}];
 		 hash = {};
-		 let done = false;
+		 let _done = false;
 	window.hash = {
 		on: (field, cb = resp=>{})=>{
-			if(!done) return setTimeout(()=>{ on(field, cb); }, 100);
+			if(!_done) return setTimeout(()=>{ on(field, cb); }, 100);
 			cb(hash[field]);
 		},
 		save: ()=>{
@@ -34,7 +34,7 @@ export  const Hash_Service =()=>{
 	}
 
 	if(!window.location.hash){
-		done = true;
+		_done = true;
 		return null;
 	}
 
@@ -42,12 +42,12 @@ export  const Hash_Service =()=>{
 	for(let i = 0; i < hash.length; i++){
 		let holder = hash[i].split('=')[0];
 		let value = hash[i].split('=')[1];
-		for(let j = 0; j < replaces.length; j++){
-			holder = holder.split(replaces[j].from).join(replaces[j].to);
-			value = value.split(replaces[j].from).join(replaces[j].to);
+		for(let j = 0; j < _replaces.length; j++){
+			holder = holder.split(_replaces[j].from).join(_replaces[j].to);
+			value = value.split(_replaces[j].from).join(_replaces[j].to);
 		}
 		hash[holder] = value;
 	}
-	done = true;	
+	_done = true;	
 	return null
 }

@@ -60,12 +60,12 @@ var Render = function Render() {
 };
 
 var Hash_Service = function Hash_Service() {
-  var replaces = [{
+  var _replaces = [{
     from: '%20',
     to: ' '
   }];
   hash = {};
-  var done = false;
+  var _done = false;
   window.hash = {
     on: function (_on) {
       function on(_x) {
@@ -82,7 +82,7 @@ var Hash_Service = function Hash_Service() {
         cb = function cb(resp) {};
       }
 
-      if (!done) return setTimeout(function () {
+      if (!_done) return setTimeout(function () {
         on(field, cb);
       }, 100);
       cb(hash[field]);
@@ -111,7 +111,7 @@ var Hash_Service = function Hash_Service() {
   };
 
   if (!window.location.hash) {
-    done = true;
+    _done = true;
     return null;
   }
 
@@ -121,39 +121,39 @@ var Hash_Service = function Hash_Service() {
     var holder = hash[i].split('=')[0];
     var value = hash[i].split('=')[1];
 
-    for (var j = 0; j < replaces.length; j++) {
-      holder = holder.split(replaces[j].from).join(replaces[j].to);
-      value = value.split(replaces[j].from).join(replaces[j].to);
+    for (var j = 0; j < _replaces.length; j++) {
+      holder = holder.split(_replaces[j].from).join(_replaces[j].to);
+      value = value.split(_replaces[j].from).join(_replaces[j].to);
     }
 
     hash[holder] = value;
   }
 
-  done = true;
+  _done = true;
   return null;
 };
 
 var Core_Service = function Core_Service() {
   var host = window.location.host.toLowerCase();
-  var _afterWhile = {};
-  var cb = {};
+  var _afterWhile2 = {};
+  var _cb = {};
   var _ids = {};
-  var done_next = {};
+  var _done_next = {};
   window.core = {
-    serial_process: function (_serial_process) {
-      function serial_process(_x, _x2, _x3) {
-        return _serial_process.apply(this, arguments);
+    _serial_process: function (_serial_process2) {
+      function _serial_process(_x, _x2, _x3) {
+        return _serial_process2.apply(this, arguments);
       }
 
-      serial_process.toString = function () {
-        return _serial_process.toString();
+      _serial_process.toString = function () {
+        return _serial_process2.toString();
       };
 
-      return serial_process;
+      return _serial_process;
     }(function (i, arr, callback) {
       if (i >= arr.length) return callback();
       arr[i](function () {
-        serial_process(++i, arr, callback);
+        _serial_process(++i, arr, callback);
       });
     }),
     set_version: function set_version(version) {
@@ -177,7 +177,7 @@ var Core_Service = function Core_Service() {
       }
     },
     serial: function serial(arr, callback) {
-      serial_process(0, arr, callback);
+      _serial_process(0, arr, callback);
     },
     each: function each(arrOrObj, func, callback, isSerial) {
       if (isSerial === void 0) {
@@ -212,7 +212,7 @@ var Core_Service = function Core_Service() {
               _loop(i);
             }
 
-            serial_process(0, serialArr, callback);
+            _serial_process(0, serialArr, callback);
           } else {
             for (var _i = 0; _i < arrOrObj.length; _i++) {
               func(arrOrObj[_i], function () {
@@ -235,6 +235,7 @@ var Core_Service = function Core_Service() {
                 each: each
               });
             }
+
             var counter = arr.length;
 
             var _loop2 = function _loop2(i) {
@@ -249,7 +250,7 @@ var Core_Service = function Core_Service() {
               _loop2(i);
             }
 
-            serial_process(0, serialArr, callback);
+            _serial_process(0, serialArr, callback);
           })();
         } else {
           (function () {
@@ -267,24 +268,24 @@ var Core_Service = function Core_Service() {
         }
       } else callback();
     },
-    afterWhile: function afterWhile(doc, cb, time) {
+    _afterWhile: function _afterWhile(doc, _cb, time) {
       if (time === void 0) {
         time = 1000;
       }
 
       if (typeof doc == 'function') {
-        cb = doc;
+        _cb = doc;
         doc = 'common';
       }
 
       if (typeof doc == 'string') {
-        if (!_afterWhile[doc]) _afterWhile[doc] = {};
-        doc = _afterWhile[doc];
+        if (!_afterWhile2[doc]) _afterWhile2[doc] = {};
+        doc = _afterWhile2[doc];
       }
 
-      if (typeof cb == 'function' && typeof time == 'number') {
+      if (typeof _cb == 'function' && typeof time == 'number') {
         clearTimeout(doc.__updateTimeout);
-        doc.__updateTimeout = setTimeout(cb, time);
+        doc.__updateTimeout = setTimeout(_cb, time);
       }
     },
     emit: function emit(signal, doc) {
@@ -292,11 +293,11 @@ var Core_Service = function Core_Service() {
         doc = {};
       }
 
-      if (!cb[signal]) cb[signal] = {};
+      if (!_cb[signal]) _cb[signal] = {};
 
-      for (var each in cb[signal]) {
-        if (typeof cb[signal][each] == 'function') {
-          cb[signal][each](doc);
+      for (var each in _cb[signal]) {
+        if (typeof _cb[signal][each] == 'function') {
+          _cb[signal][each](doc);
         }
       }
     },
@@ -310,21 +311,21 @@ var Core_Service = function Core_Service() {
       };
 
       return on;
-    }(function (signal, cb) {
+    }(function (signal, _cb) {
       var id = Math.floor(Math.random() * Date.now()) + 1;
-      if (_ids[id]) return on(signal, cb);
+      if (_ids[id]) return on(signal, _cb);
       _ids[id] = true;
-      if (!cb[signal]) cb[signal] = {};
-      cb[signal][id] = cb;
+      if (!_cb[signal]) _cb[signal] = {};
+      _cb[signal][id] = _cb;
       return function () {
-        cb[signal][id] = null;
+        _cb[signal][id] = null;
       };
     }),
     done: function done(signal) {
-      done_next[signal] = true;
+      _done_next[signal] = true;
     },
     ready: function ready(signal) {
-      return done_next[signal];
+      return _done_next[signal];
     },
     next: function (_next) {
       function next(_x6, _x7) {
@@ -336,10 +337,10 @@ var Core_Service = function Core_Service() {
       };
 
       return next;
-    }(function (signal, cb) {
-      if (done_next[signal]) cb();else {
+    }(function (signal, _cb) {
+      if (_done_next[signal]) _cb();else {
         return setTimeout(function () {
-          next(signal, cb);
+          next(signal, _cb);
         }, 100);
       }
     })
@@ -349,6 +350,384 @@ var Core_Service = function Core_Service() {
   if (/windows phone/i.test(userAgent)) ; else if (/android/i.test(userAgent)) ; else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) ;
 
   core.set_version();
+  return null;
+};
+
+var _this = undefined;
+
+var Store_Service = function Store_Service(config) {
+  if (config === void 0) {
+    config = {};
+  }
+
+  var _db = null;
+  var _data = {};
+  var tempConfig = JSON.parse(JSON.stringify(config));
+  var _id = '_id';
+  if (!tempConfig.database) tempConfig.database = {};
+  if (tempConfig.database._id) _id = tempConfig.database._id;
+
+  if (Array.isArray(tempConfig.database.collections)) {
+    for (var i = 0; i < tempConfig.database.collections.length; i++) {
+      _initialize(tempConfig.database.collections[i]);
+    }
+  }
+
+  document.addEventListener('deviceready', function () {
+    if (window.sqlitePlugin) {
+      _db = window.sqlitePlugin.openDatabase({
+        location: 'default',
+        name: 'data'
+      });
+      if (!_db) return;
+
+      _db.transaction(function (tx) {
+        tx.executeSql('CREATE TABLE IF NOT EXISTS Data (hold, value)');
+        tx.executeSql("INSERT INTO Data (hold, value) VALUES (?,?)", ["test", "100"], function (tx, res) {}, function (e) {});
+      }, function (error) {}, function () {});
+    }
+  });
+  window.store = {
+    set: function (_set) {
+      function set(_x, _x2) {
+        return _set.apply(this, arguments);
+      }
+
+      set.toString = function () {
+        return _set.toString();
+      };
+
+      return set;
+    }(function (hold, value, cb, errCb) {
+      if (cb === void 0) {
+        cb = function cb() {};
+      }
+
+      if (errCb === void 0) {
+        errCb = function errCb() {};
+      }
+
+      if (window.sqlitePlugin) {
+        if (!_db) {
+          return setTimeout(function () {
+            set(hold, value, cb);
+          }, 100);
+        }
+
+        get(hold, function (resp) {
+          if (resp) {
+            _db.transaction(function (tx) {
+              tx.executeSql("UPDATE Data SET value=? WHERE hold=?", [value, hold], cb, cb);
+            }, errCb);
+          } else {
+            _db.transaction(function (tx) {
+              tx.executeSql('INSERT INTO Data (hold, value) VALUES (?, ?)', [hold, value], cb, cb);
+            }, errCb);
+          }
+        });
+      } else {
+        try {
+          localStorage.setItem('waw_temp_storage_' + hold, value);
+        } catch (e) {
+          errCb();
+        }
+
+        cb();
+      }
+    }),
+    get: function (_get) {
+      function get(_x3) {
+        return _get.apply(this, arguments);
+      }
+
+      get.toString = function () {
+        return _get.toString();
+      };
+
+      return get;
+    }(function (hold, cb, errcb) {
+      if (cb === void 0) {
+        cb = function cb() {};
+      }
+
+      if (errcb === void 0) {
+        errcb = function errcb() {};
+      }
+
+      if (window.sqlitePlugin) {
+        if (!_db) {
+          return setTimeout(function () {
+            get(hold, cb);
+          }, 100);
+        }
+
+        _db.executeSql('SELECT value FROM Data where hold=?', [hold], function (rs) {
+          if (rs.rows && rs.rows.length) {
+            cb(rs.rows.item(0).value);
+          } else {
+            cb('');
+          }
+        }, errcb);
+      } else {
+        cb(localStorage.getItem('waw_temp_storage_' + hold) || '');
+      }
+    }),
+    remove: function (_remove) {
+      function remove(_x4) {
+        return _remove.apply(this, arguments);
+      }
+
+      remove.toString = function () {
+        return _remove.toString();
+      };
+
+      return remove;
+    }(function (hold, cb, errcb) {
+      if (cb === void 0) {
+        cb = function cb() {};
+      }
+
+      if (errcb === void 0) {
+        errcb = function errcb() {};
+      }
+
+      if (window.sqlitePlugin) {
+        if (!_db) return setTimeout(function () {
+          remove(hold);
+        }, 100);
+
+        _db.executeSql('DELETE FROM Data where hold=?', [hold], cb, errcb);
+      } else {
+        localStorage.removeItem('waw_temp_storage_' + hold);
+        cb();
+      }
+    }),
+    clear: function (_clear) {
+      function clear() {
+        return _clear.apply(this, arguments);
+      }
+
+      clear.toString = function () {
+        return _clear.toString();
+      };
+
+      return clear;
+    }(function (cb, errcb) {
+      if (cb === void 0) {
+        cb = function cb() {};
+      }
+
+      if (errcb === void 0) {
+        errcb = function errcb() {};
+      }
+
+      localStorage.clear();
+
+      if (window.sqlitePlugin) {
+        if (!db) {
+          return setTimeout(function () {
+            clear();
+          }, 100);
+        }
+
+        _db.executeSql('DROP TABLE IF EXISTS Data', [], function (rs) {
+          _db.executeSql('CREATE TABLE IF NOT EXISTS Data (hold, value)', [], cb, errcb);
+        }, errcb);
+      }
+    }),
+    _set_docs: function _set_docs(type) {
+      var docs = [];
+
+      for (var each in _data[type].by_id) {
+        docs.push(each);
+      }
+
+      set(type + '_docs', JSON.stringify(docs));
+    },
+    _add_doc: function _add_doc(type, doc) {
+      for (var each in doc) {
+        _data[type].by_id[doc[_id]][each] = doc[each];
+      }
+
+      var add = true;
+
+      _data[type].all.forEach(function (selected) {
+        if (selected[_id] == doc[_id]) add = false;
+      });
+
+      if (add) _data[type].all.push(_data[type].by_id[doc[_id]]);
+    },
+    _initialize: function _initialize(collection) {
+      if (!collection.all) collection.all = [];
+      if (!collection.by_id) collection.by_id = {};
+      _data[collection.name] = collection;
+      get(collection.name + '_docs', function (docs) {
+        if (!docs) return;
+        docs = JSON.parse(docs);
+
+        for (var _i = 0; _i < docs.length; _i++) {
+          _add_doc(collection.name, get_doc(collection.name, docs[_i]));
+        }
+      });
+    },
+    get_docs: function get_docs(type, doc) {
+      return _data[type].all;
+    },
+    get_doc: function get_doc(type, _id) {
+      if (!_data[type].by_id[_id]) {
+        _data[type].by_id[_id] = {};
+        _data[type].by_id[_id][_this._id] = _id;
+        get(type + '_' + _id, function (doc) {
+          if (!doc) return;
+
+          for (var each in doc) {
+            _data[type].by_id[_id][each] = doc[each];
+          }
+        });
+      }
+
+      return _data[type].by_id[_id];
+    },
+    replace: function replace(doc, each, exe) {
+      doc[each] = exe(doc, function (value) {
+        doc[each] = value;
+      });
+    },
+    set_doc: function set_doc(type, doc) {
+      if (!_data[type].by_id[doc[_id]]) {
+        _data[type].by_id[doc[_id]] = {};
+      }
+
+      if (typeof _data[type].opts.replace == 'function') {
+        doc = _data[type].opts.replace(doc);
+      } else if (typeof _data[type].opts.replace == 'object') {
+        for (var each in _data[type].opts.replace) {
+          if (typeof _data[type].opts.replace[each] == 'function') {
+            replace(doc, each, _data[type].opts.replace[each]);
+          }
+        }
+      }
+
+      set(type + '_' + doc[_id], doc);
+
+      _add_doc(type, doc);
+
+      _set_docs(type);
+
+      return _data[type].by_id[doc[_id]];
+    },
+    remove_doc: function remove_doc(type, _id) {
+      remove(type + '_' + _id);
+      delete data[type].by_id[_id];
+      store_docs(type);
+    },
+    sortAscId: function sortAscId(id) {
+      if (id === void 0) {
+        id = '_id';
+      }
+
+      return function (a, b) {
+        if (a[id] > b[id]) return 1;else return -1;
+      };
+    },
+    sortDescId: function sortDescId(id) {
+      if (id === void 0) {
+        id = '_id';
+      }
+
+      return function (a, b) {
+        if (a[id] < b[id]) return 1;else return -1;
+      };
+    },
+    sortAscString: function sortAscString(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (a[opts.field].toLowerCase() > b[opts.field].toLowerCase()) return 1;else if (a[opts.field].toLowerCase() < b[opts.field].toLowerCase() || !opts.next) return -1;else return opts.next(a, b);
+      };
+    },
+    sortDescString: function sortDescString(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (a[opts.field].toLowerCase() < b[opts.field].toLowerCase()) return 1;else if (a[opts.field].toLowerCase() > b[opts.field].toLowerCase() || !opts.next) return -1;else return opts.next(a, b);
+      };
+    },
+    sortAscDate: function sortAscDate(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (a[opts.field].getTime() > b[opts.field].getTime()) return 1;else if (a[opts.field].getTime() < b[opts.field].getTime() || !opts.next) return -1;else return opts.next(a, b);
+      };
+    },
+    sortDescDate: function sortDescDate(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (a[opts.field].getTime() < b[opts.field].getTime()) return 1;else if (a[opts.field].getTime() > b[opts.field].getTime() || !opts.next) return -1;else return opts.next(a, b);
+      };
+    },
+    sortAscNumber: function sortAscNumber(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (a[opts.field] > b[opts.field]) return 1;else if (a[opts.field] < b[opts.field] || !opts.next) return -1;else return opts.next(a, b);
+      };
+    },
+    sortDescNumber: function sortDescNumber(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (a[opts.field] < b[opts.field]) return 1;else if (a[opts.field] > b[opts.field] || !opts.next) return -1;else return opts.next(a, b);
+      };
+    },
+    sortAscBoolean: function sortAscBoolean(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (!a[opts.field] && b[opts.field]) return 1;else if (a[opts.field] && !b[opts.field] || !opts.next) return -1;else return opts.next(a, b);
+      };
+    },
+    sortDescBoolean: function sortDescBoolean(opts) {
+      if (typeof opts == 'string') {
+        opts = {
+          field: opts
+        };
+      }
+
+      return function (a, b) {
+        if (a[opts.field] && !b[opts.field]) return 1;else if (!a[opts.field] && b[opts.field] || !opts.next) return -1;else return opts.next(a, b);
+      };
+    }
+  };
   return null;
 };
 
@@ -364,9 +743,13 @@ var HashService = function HashService() {
 var CoreService = function CoreService() {
   return /*#__PURE__*/React.createElement(Core_Service, null);
 };
+var StoreService = function StoreService() {
+  return /*#__PURE__*/React.createElement(Store_Service, null);
+};
 
 exports.CoreService = CoreService;
 exports.HashService = HashService;
 exports.HttpService = HttpService;
 exports.RenderService = RenderService;
+exports.StoreService = StoreService;
 //# sourceMappingURL=index.js.map
