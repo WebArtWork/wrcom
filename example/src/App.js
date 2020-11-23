@@ -2,7 +2,6 @@ import React from 'react'
 
 import {HttpService, RenderService, HashService, CoreService, StoreService} from 'wrcom'
 import 'wrcom/dist/index.css'
-import DefaultPage from './pages/default_page'
 
 class App  extends React.Component{
 	constructor (props){
@@ -11,13 +10,15 @@ class App  extends React.Component{
 	}
 	render(){
 		return <div>
+			{/*SERVICE*/}
 			<HttpService/>
 			<RenderService/>
 			<HashService/>
 			<CoreService/> 
 			<StoreService/>
 
-			<DefaultPage />
+			{/*PAGES*/}
+
 		</div>
 	}
 }
