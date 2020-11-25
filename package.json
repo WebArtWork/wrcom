@@ -2,7 +2,7 @@
   "name": "wrcom",
   "version": "1.0.0",
   "description": "Made with create-react-library",
- "author": {
+  "author": {
     "name": "Honchar Denys",
     "email": "crackeraki@gmail.com"
   },

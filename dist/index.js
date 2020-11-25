@@ -59,65 +59,19 @@ var Render = function Render() {
   return null;
 };
 
-var Hash_Service = function Hash_Service() {
+function Hash_Service() {
   var _replaces = [{
     from: '%20',
     to: ' '
   }];
-  hash = {};
-  var _done = false;
-  window.hash = {
-    on: function (_on) {
-      function on(_x) {
-        return _on.apply(this, arguments);
-      }
-
-      on.toString = function () {
-        return _on.toString();
-      };
-
-      return on;
-    }(function (field, cb) {
-      if (cb === void 0) {
-        cb = function cb(resp) {};
-      }
-
-      if (!_done) return setTimeout(function () {
-        on(field, cb);
-      }, 100);
-      cb(hash[field]);
-    }),
-    save: function save() {
-      var hash = '';
-
-      for (var each in hash) {
-        if (hash) hash += '&';
-        hash += each + '=' + hash[each];
-      }
-
-      window.location.hash = hash;
-    },
-    set: function set(field, value) {
-      hash[field] = value;
-      save();
-    },
-    get: function get(field) {
-      return hash[field];
-    },
-    clear: function clear(field) {
-      delete hash[field];
-      save();
-    }
-  };
-
-  if (!window.location.hash) {
-    _done = true;
-    return null;
-  }
-
   var hash = window.location.hash.replace('#!#', '').replace('#', '').split('&');
 
-  for (var i = 0; i < hash.length; i++) {
+  for (var i = hash.length - 1; i >= 0; i--) {
+    if (!hash[i]) {
+      hash.splice(i, 1);
+      continue;
+    }
+
     var holder = hash[i].split('=')[0];
     var value = hash[i].split('=')[1];
 
@@ -129,9 +83,35 @@ var Hash_Service = function Hash_Service() {
     hash[holder] = value;
   }
 
-  _done = true;
+  window.hash = {
+    save: function save() {
+      var new_hash = '';
+
+      for (var each in hash) {
+        if (new_hash) new_hash += '&';
+        new_hash += each + '=' + hash[each];
+      }
+
+      if (history.pushState) {
+        history.pushState(null, null, '#' + new_hash);
+      } else {
+        location.hash = '#' + new_hash;
+      }
+    },
+    set: function set(field, value) {
+      hash[field] = value;
+      window.hash.save();
+    },
+    get: function get(field) {
+      return hash[field];
+    },
+    clear: function clear(field) {
+      delete hash[field];
+      window.hash.save();
+    }
+  };
   return null;
-};
+}
 
 var Core_Service = function Core_Service() {
   var host = window.location.host.toLowerCase();
@@ -353,26 +333,12 @@ var Core_Service = function Core_Service() {
   return null;
 };
 
-var _this = undefined;
-
-var Store_Service = function Store_Service(config) {
-  if (config === void 0) {
-    config = {};
-  }
-
+function Store_Service(config) {
   var _db = null;
   var _data = {};
-  var tempConfig = JSON.parse(JSON.stringify(config));
   var _id = '_id';
-  if (!tempConfig.database) tempConfig.database = {};
-  if (tempConfig.database._id) _id = tempConfig.database._id;
-
-  if (Array.isArray(tempConfig.database.collections)) {
-    for (var i = 0; i < tempConfig.database.collections.length; i++) {
-      _initialize(tempConfig.database.collections[i]);
-    }
-  }
-
+  if (!config.database) config.database = {};
+  if (config.database._id) _id = config.database._id;
   document.addEventListener('deviceready', function () {
     if (window.sqlitePlugin) {
       _db = window.sqlitePlugin.openDatabase({
@@ -394,17 +360,7 @@ var Store_Service = function Store_Service(config) {
   };
 
   window.store = {
-    set: function (_set) {
-      function set(_x, _x2) {
-        return _set.apply(this, arguments);
-      }
-
-      set.toString = function () {
-        return _set.toString();
-      };
-
-      return set;
-    }(function (hold, value, cb, errCb) {
+    set: function set(hold, value, cb, errCb) {
       if (cb === void 0) {
         cb = function cb() {};
       }
@@ -416,11 +372,11 @@ var Store_Service = function Store_Service(config) {
       if (window.sqlitePlugin) {
         if (!_db) {
           return setTimeout(function () {
-            set(hold, value, cb);
+            window.store.set(hold, value, cb);
           }, 100);
         }
 
-        get(hold, function (resp) {
+        window.store.get(hold, function (resp) {
           if (resp) {
             _db.transaction(function (tx) {
               tx.executeSql("UPDATE Data SET value=? WHERE hold=?", [value, hold], cb, cb);
@@ -440,18 +396,8 @@ var Store_Service = function Store_Service(config) {
 
         cb();
       }
-    }),
-    get: function (_get) {
-      function get(_x3) {
-        return _get.apply(this, arguments);
-      }
-
-      get.toString = function () {
-        return _get.toString();
-      };
-
-      return get;
-    }(function (hold, cb, errcb) {
+    },
+    get: function get(hold, cb, errcb) {
       if (cb === void 0) {
         cb = function cb() {};
       }
@@ -463,7 +409,7 @@ var Store_Service = function Store_Service(config) {
       if (window.sqlitePlugin) {
         if (!_db) {
           return setTimeout(function () {
-            get(hold, cb);
+            window.store.get(hold, cb);
           }, 100);
         }
 
@@ -477,18 +423,8 @@ var Store_Service = function Store_Service(config) {
       } else {
         cb(localStorage.getItem('waw_temp_storage_' + hold) || '');
       }
-    }),
-    remove: function (_remove) {
-      function remove(_x4) {
-        return _remove.apply(this, arguments);
-      }
-
-      remove.toString = function () {
-        return _remove.toString();
-      };
-
-      return remove;
-    }(function (hold, cb, errcb) {
+    },
+    remove: function remove(hold, cb, errcb) {
       if (cb === void 0) {
         cb = function cb() {};
       }
@@ -499,7 +435,7 @@ var Store_Service = function Store_Service(config) {
 
       if (window.sqlitePlugin) {
         if (!_db) return setTimeout(function () {
-          remove(hold);
+          window.store.remove(hold);
         }, 100);
 
         _db.executeSql('DELETE FROM Data where hold=?', [hold], cb, errcb);
@@ -507,18 +443,8 @@ var Store_Service = function Store_Service(config) {
         localStorage.removeItem('waw_temp_storage_' + hold);
         cb();
       }
-    }),
-    clear: function (_clear) {
-      function clear() {
-        return _clear.apply(this, arguments);
-      }
-
-      clear.toString = function () {
-        return _clear.toString();
-      };
-
-      return clear;
-    }(function (cb, errcb) {
+    },
+    clear: function clear(cb, errcb) {
       if (cb === void 0) {
         cb = function cb() {};
       }
@@ -532,7 +458,7 @@ var Store_Service = function Store_Service(config) {
       if (window.sqlitePlugin) {
         if (!db) {
           return setTimeout(function () {
-            clear();
+            window.store.clear();
           }, 100);
         }
 
@@ -540,7 +466,7 @@ var Store_Service = function Store_Service(config) {
           _db.executeSql('CREATE TABLE IF NOT EXISTS Data (hold, value)', [], cb, errcb);
         }, errcb);
       }
-    }),
+    },
     _set_docs: function _set_docs(type) {
       var docs = [];
 
@@ -548,7 +474,7 @@ var Store_Service = function Store_Service(config) {
         docs.push(each);
       }
 
-      set(type + '_docs', JSON.stringify(docs));
+      window.store.set(type + '_docs', JSON.stringify(docs));
     },
     _add_doc: function _add_doc(type, doc) {
       for (var each in doc) {
@@ -671,12 +597,12 @@ var Store_Service = function Store_Service(config) {
       }
 
       _data[collection.name] = collection;
-      get(collection.name + '_docs', function (docs) {
+      window.store.get(collection.name + '_docs', function (docs) {
         if (!docs) return;
         docs = JSON.parse(docs);
 
-        for (var _i = 0; _i < docs.length; _i++) {
-          _add_doc(collection.name, get_doc(collection.name, docs[_i]));
+        for (var i = 0; i < docs.length; i++) {
+          window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
         }
       });
     },
@@ -692,8 +618,8 @@ var Store_Service = function Store_Service(config) {
     get_doc: function get_doc(type, _id) {
       if (!_data[type].by_id[_id]) {
         _data[type].by_id[_id] = {};
-        _data[type].by_id[_id][_this._id] = _id;
-        get(type + '_' + _id, function (doc) {
+        _data[type].by_id[_id][_id] = _id;
+        window.store.get(type + '_' + _id, function (doc) {
           if (!doc) return;
 
           for (var each in doc) {
@@ -704,7 +630,7 @@ var Store_Service = function Store_Service(config) {
 
       return _data[type].by_id[_id];
     },
-    replace: function replace(doc, each, exe) {
+    _replace: function _replace(doc, each, exe) {
       doc[each] = exe(doc, function (value) {
         doc[each] = value;
       });
@@ -714,26 +640,26 @@ var Store_Service = function Store_Service(config) {
         _data[type].by_id[doc[_id]] = {};
       }
 
-      if (typeof _data[type].opts.replace == 'function') {
-        doc = _data[type].opts.replace(doc);
-      } else if (typeof _data[type].opts.replace == 'object') {
-        for (var each in _data[type].opts.replace) {
-          if (typeof _data[type].opts.replace[each] == 'function') {
-            replace(doc, each, _data[type].opts.replace[each]);
+      if (typeof _data[type].opts._replace == 'function') {
+        doc = _data[type].opts._replace(doc);
+      } else if (typeof _data[type].opts._replace == 'object') {
+        for (var each in _data[type].opts._replace) {
+          if (typeof _data[type].opts._replace[each] == 'function') {
+            window.store._replace(doc, each, _data[type].opts._replace[each]);
           }
         }
       }
 
-      set(type + '_' + doc[_id], doc);
+      window.store.set(type + '_' + doc[_id], doc);
 
-      _add_doc(type, doc);
+      window.store._add_doc(type, doc);
 
-      _set_docs(type);
+      window.store._set_docs(type);
 
       return _data[type].by_id[doc[_id]];
     },
     remove_doc: function remove_doc(type, _id) {
-      remove(type + '_' + _id);
+      window.store.remove(type + '_' + _id);
       delete data[type].by_id[_id];
       store_docs(type);
     },
@@ -844,8 +770,15 @@ var Store_Service = function Store_Service(config) {
       };
     }
   };
+
+  if (Array.isArray(config.database.collections)) {
+    for (var i = 0; i < config.database.collections.length; i++) {
+      window.store._initialize(config.database.collections[i]);
+    }
+  }
+
   return null;
-};
+}
 
 var HttpService = function HttpService() {
   return /*#__PURE__*/React.createElement(HTTP, null);
@@ -859,8 +792,8 @@ var HashService = function HashService() {
 var CoreService = function CoreService() {
   return /*#__PURE__*/React.createElement(Core_Service, null);
 };
-var StoreService = function StoreService() {
-  return /*#__PURE__*/React.createElement(Store_Service, null);
+var StoreService = function StoreService(config) {
+  return Store_Service(config);
 };
 
 exports.CoreService = CoreService;

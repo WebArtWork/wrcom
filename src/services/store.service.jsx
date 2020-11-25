@@ -1,15 +1,10 @@
-export const Store_Service =(config={})=> {
+export  function Store_Service(config){
+//export const Store_Service = function(config={}){
 	let _db:any = null;
 	let _data:any = {};
-	let tempConfig = JSON.parse(JSON.stringify(config));
 	let _id = '_id';
-	if(!tempConfig.database) tempConfig.database={};
-	if(tempConfig.database._id) _id = tempConfig.database._id;
-	if(Array.isArray(tempConfig.database.collections)){
-		for (let i = 0; i < tempConfig.database.collections.length; i++){
-			_initialize(tempConfig.database.collections[i]);
-		}
-	}
+			if(!config.database) config.database={};
+	if(config.database._id) _id = config.database._id;
 	// /* SQL Management*/
 	document.addEventListener('deviceready', () => {
 		if(window.sqlitePlugin){
@@ -38,10 +33,10 @@ export const Store_Service =(config={})=> {
 			if(window.sqlitePlugin){
 				if(!_db){
 					return setTimeout(()=>{
-						set(hold, value, cb);
+						window.store.set(hold, value, cb);
 					}, 100);
 				} 
-				get(hold, resp=>{
+				window.store.get(hold, resp=>{
 					if(resp){
 						_db.transaction((tx) => {
 							tx.executeSql("UPDATE Data SET value=? WHERE hold=?", [value, hold], cb, cb);
@@ -63,7 +58,7 @@ export const Store_Service =(config={})=> {
 			if(window.sqlitePlugin){
 				if(!_db){
 					return setTimeout(()=>{
-						get(hold, cb);
+						window.store.get(hold, cb);
 					}, 100);
 				} 
 				_db.executeSql('SELECT value FROM Data where hold=?', [hold], (rs)=>{
@@ -81,7 +76,7 @@ export const Store_Service =(config={})=> {
 			if(window.sqlitePlugin){
 				if(!_db)
 					return setTimeout(()=>{
-						remove(hold);
+						window.store.remove(hold);
 					}, 100);
 				_db.executeSql('DELETE FROM Data where hold=?', [hold], cb, errcb);	
 			}else{
@@ -94,7 +89,7 @@ export const Store_Service =(config={})=> {
 			if(window.sqlitePlugin){
 				if(!db){
 					return setTimeout(()=>{
-						clear();
+						window.store.clear();
 					}, 100);
 				}
 				_db.executeSql('DROP TABLE IF EXISTS Data', [], (rs)=>{
@@ -108,11 +103,16 @@ export const Store_Service =(config={})=> {
 			for (let each in _data[type].by_id){
 				docs.push(each);
 			}
-			set(type+'_docs', JSON.stringify(docs));
+			window.store.set(type+'_docs', JSON.stringify(docs));
 		},
+		// set_docs:(type:string, docs:any)=>{
+		// 	for (let i = 0; i < docs.length; i++) {
+		// 		window.store.set_doc(type, docs[i])
+		// },
 		_add_doc:(type, doc)=>{
 			// replace existed
 			for (let each in doc){
+				// console.log(doc[each])
 				_data[type].by_id[doc[_id]][each] = doc[each];
 			}
 			// manage all
@@ -203,23 +203,22 @@ export const Store_Service =(config={})=> {
 				}
 			}
 			_data[collection.name] = collection;
-			get(collection.name+'_docs', docs=>{
+			window.store.get(collection.name+'_docs', docs=>{
 				if(!docs) return;
 				docs = JSON.parse(docs);
 				for (let i = 0; i < docs.length; i++){
-					_add_doc(collection.name, get_doc(collection.name, docs[i]));
+					window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
 				}
 			});
 		},
-
-		all:(type:string, doc:object)=>{ return _data[type].all; },
-		query:(type:string, doc:object)=>{ return _data[type].query; },
-		groups:(type:string, doc:object)=>{ return _data[type].groups; },
+		all: (type:string, doc:object)=>{ return _data[type].all; },
+		query: (type:string, doc:object)=>{ return _data[type].query; },
+		groups: (type:string, doc:object)=>{ return _data[type].groups; },
 		get_doc:(type:string, _id:string)=>{
 			if(!_data[type].by_id[_id]){
 				_data[type].by_id[_id] = {};
-				_data[type].by_id[_id][this._id] = _id;
-				get(type+'_'+_id, doc=>{
+				_data[type].by_id[_id][_id] = _id;
+				window.store.get(type+'_'+_id, doc=>{
 					if(!doc) return;
 					for (let each in doc){
 						_data[type].by_id[_id][each] = doc[each]
@@ -228,8 +227,7 @@ export const Store_Service =(config={})=> {
 			}
 			return _data[type].by_id[_id];
 		},
-
-		replace:(doc, each, exe)=>{
+		_replace:(doc, each, exe)=>{
 			doc[each] = exe(doc, value=>{
 				doc[each] = value;
 			});
@@ -238,22 +236,22 @@ export const Store_Service =(config={})=> {
 			if(!_data[type].by_id[doc[_id]]){
 				_data[type].by_id[doc[_id]] = {};
 			}
-			if(typeof _data[type].opts.replace == 'function'){
-				doc = _data[type].opts.replace(doc);
-			}else if(typeof _data[type].opts.replace == 'object'){
-				for (let each in _data[type].opts.replace){
-					if(typeof _data[type].opts.replace[each] == 'function'){
-						replace(doc, each, _data[type].opts.replace[each]);
+			if(typeof _data[type].opts._replace == 'function'){
+				doc = _data[type].opts._replace(doc);
+			}else if(typeof _data[type].opts._replace == 'object'){
+				for (let each in _data[type].opts._replace){
+					if(typeof _data[type].opts._replace[each] == 'function'){
+						window.store._replace(doc, each, _data[type].opts._replace[each]);
 					}
 				}
 			}
-			set(type+'_'+doc[_id], doc);
-			_add_doc(type, doc);
-			_set_docs(type);
+			window.store.set(type+'_'+doc[_id], doc);
+			window.store._add_doc(type, doc);
+			window.store._set_docs(type);
 			return _data[type].by_id[doc[_id]];
 		},
 		remove_doc(type:string, _id:string){
-			remove(type+'_'+_id);
+			window.store.remove(type+'_'+_id);
 			delete data[type].by_id[_id];
 			store_docs(type);
 		},
@@ -368,17 +366,11 @@ export const Store_Service =(config={})=> {
 		}
 	}
 
-	// waw.store.set_docs = (type:string, docs:any)=>{
-	// 	for (var i = 0; i < docs.length; i++) {
-	// 		waw.store.set_doc(type, docs[i]);
-	// 	}		
-	// }
-	// // user service
-	// window.http.get('/api/user/get', users=>{
-	// 	window.store.set_docs('user', users);
-	// });
-	// // admin users page
-	// let users = window.store.get_docs('user');
+	if(Array.isArray(config.database.collections)){
+		for (let i = 0; i < config.database.collections.length; i++){
+			window.store._initialize(config.database.collections[i]);
+		}
+	}
 	return null;
 }
 

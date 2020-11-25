@@ -18,6 +18,6 @@ export const HashService =()=>{
 export const CoreService =()=>{
 	return <Core_Service />
 }
-export const StoreService =()=>{
-	return <Store_Service />
+export const StoreService =(config)=>{
+	return Store_Service(config)
 }

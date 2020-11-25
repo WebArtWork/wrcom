@@ -45,51 +45,19 @@ const Render = () => {
   return null;
 };
 
-const Hash_Service = () => {
+function Hash_Service() {
   const _replaces = [{
     from: '%20',
     to: ' '
   }];
-  hash = {};
-  let _done = false;
-  window.hash = {
-    on: (field, cb = resp => {}) => {
-      if (!_done) return setTimeout(() => {
-        on(field, cb);
-      }, 100);
-      cb(hash[field]);
-    },
-    save: () => {
-      let hash = '';
-
-      for (let each in hash) {
-        if (hash) hash += '&';
-        hash += each + '=' + hash[each];
-      }
-
-      window.location.hash = hash;
-    },
-    set: (field, value) => {
-      hash[field] = value;
-      save();
-    },
-    get: field => {
-      return hash[field];
-    },
-    clear: field => {
-      delete hash[field];
-      save();
-    }
-  };
-
-  if (!window.location.hash) {
-    _done = true;
-    return null;
-  }
-
   let hash = window.location.hash.replace('#!#', '').replace('#', '').split('&');
 
-  for (let i = 0; i < hash.length; i++) {
+  for (let i = hash.length - 1; i >= 0; i--) {
+    if (!hash[i]) {
+      hash.splice(i, 1);
+      continue;
+    }
+
     let holder = hash[i].split('=')[0];
     let value = hash[i].split('=')[1];
 
@@ -101,9 +69,35 @@ const Hash_Service = () => {
     hash[holder] = value;
   }
 
-  _done = true;
+  window.hash = {
+    save: () => {
+      let new_hash = '';
+
+      for (const each in hash) {
+        if (new_hash) new_hash += '&';
+        new_hash += each + '=' + hash[each];
+      }
+
+      if (history.pushState) {
+        history.pushState(null, null, '#' + new_hash);
+      } else {
+        location.hash = '#' + new_hash;
+      }
+    },
+    set: (field, value) => {
+      hash[field] = value;
+      window.hash.save();
+    },
+    get: field => {
+      return hash[field];
+    },
+    clear: field => {
+      delete hash[field];
+      window.hash.save();
+    }
+  };
   return null;
-};
+}
 
 const Core_Service = () => {
   let host = window.location.host.toLowerCase();
@@ -266,20 +260,12 @@ const Core_Service = () => {
   return null;
 };
 
-const Store_Service = (config = {}) => {
+function Store_Service(config) {
   let _db = null;
   let _data = {};
-  let tempConfig = JSON.parse(JSON.stringify(config));
   let _id = '_id';
-  if (!tempConfig.database) tempConfig.database = {};
-  if (tempConfig.database._id) _id = tempConfig.database._id;
-
-  if (Array.isArray(tempConfig.database.collections)) {
-    for (let i = 0; i < tempConfig.database.collections.length; i++) {
-      _initialize(tempConfig.database.collections[i]);
-    }
-  }
-
+  if (!config.database) config.database = {};
+  if (config.database._id) _id = config.database._id;
   document.addEventListener('deviceready', () => {
     if (window.sqlitePlugin) {
       _db = window.sqlitePlugin.openDatabase({
@@ -305,11 +291,11 @@ const Store_Service = (config = {}) => {
       if (window.sqlitePlugin) {
         if (!_db) {
           return setTimeout(() => {
-            set(hold, value, cb);
+            window.store.set(hold, value, cb);
           }, 100);
         }
 
-        get(hold, resp => {
+        window.store.get(hold, resp => {
           if (resp) {
             _db.transaction(tx => {
               tx.executeSql("UPDATE Data SET value=? WHERE hold=?", [value, hold], cb, cb);
@@ -334,7 +320,7 @@ const Store_Service = (config = {}) => {
       if (window.sqlitePlugin) {
         if (!_db) {
           return setTimeout(() => {
-            get(hold, cb);
+            window.store.get(hold, cb);
           }, 100);
         }
 
@@ -352,7 +338,7 @@ const Store_Service = (config = {}) => {
     remove: (hold, cb = () => {}, errcb = () => {}) => {
       if (window.sqlitePlugin) {
         if (!_db) return setTimeout(() => {
-          remove(hold);
+          window.store.remove(hold);
         }, 100);
 
         _db.executeSql('DELETE FROM Data where hold=?', [hold], cb, errcb);
@@ -367,7 +353,7 @@ const Store_Service = (config = {}) => {
       if (window.sqlitePlugin) {
         if (!db) {
           return setTimeout(() => {
-            clear();
+            window.store.clear();
           }, 100);
         }
 
@@ -383,7 +369,7 @@ const Store_Service = (config = {}) => {
         docs.push(each);
       }
 
-      set(type + '_docs', JSON.stringify(docs));
+      window.store.set(type + '_docs', JSON.stringify(docs));
     },
     _add_doc: (type, doc) => {
       for (let each in doc) {
@@ -494,12 +480,12 @@ const Store_Service = (config = {}) => {
       }
 
       _data[collection.name] = collection;
-      get(collection.name + '_docs', docs => {
+      window.store.get(collection.name + '_docs', docs => {
         if (!docs) return;
         docs = JSON.parse(docs);
 
         for (let i = 0; i < docs.length; i++) {
-          _add_doc(collection.name, get_doc(collection.name, docs[i]));
+          window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
         }
       });
     },
@@ -515,8 +501,8 @@ const Store_Service = (config = {}) => {
     get_doc: (type, _id) => {
       if (!_data[type].by_id[_id]) {
         _data[type].by_id[_id] = {};
-        _data[type].by_id[_id][undefined._id] = _id;
-        get(type + '_' + _id, doc => {
+        _data[type].by_id[_id][_id] = _id;
+        window.store.get(type + '_' + _id, doc => {
           if (!doc) return;
 
           for (let each in doc) {
@@ -527,7 +513,7 @@ const Store_Service = (config = {}) => {
 
       return _data[type].by_id[_id];
     },
-    replace: (doc, each, exe) => {
+    _replace: (doc, each, exe) => {
       doc[each] = exe(doc, value => {
         doc[each] = value;
       });
@@ -537,27 +523,27 @@ const Store_Service = (config = {}) => {
         _data[type].by_id[doc[_id]] = {};
       }
 
-      if (typeof _data[type].opts.replace == 'function') {
-        doc = _data[type].opts.replace(doc);
-      } else if (typeof _data[type].opts.replace == 'object') {
-        for (let each in _data[type].opts.replace) {
-          if (typeof _data[type].opts.replace[each] == 'function') {
-            replace(doc, each, _data[type].opts.replace[each]);
+      if (typeof _data[type].opts._replace == 'function') {
+        doc = _data[type].opts._replace(doc);
+      } else if (typeof _data[type].opts._replace == 'object') {
+        for (let each in _data[type].opts._replace) {
+          if (typeof _data[type].opts._replace[each] == 'function') {
+            window.store._replace(doc, each, _data[type].opts._replace[each]);
           }
         }
       }
 
-      set(type + '_' + doc[_id], doc);
+      window.store.set(type + '_' + doc[_id], doc);
 
-      _add_doc(type, doc);
+      window.store._add_doc(type, doc);
 
-      _set_docs(type);
+      window.store._set_docs(type);
 
       return _data[type].by_id[doc[_id]];
     },
 
     remove_doc(type, _id) {
-      remove(type + '_' + _id);
+      window.store.remove(type + '_' + _id);
       delete data[type].by_id[_id];
       store_docs(type);
     },
@@ -661,8 +647,15 @@ const Store_Service = (config = {}) => {
       };
     }
   };
+
+  if (Array.isArray(config.database.collections)) {
+    for (let i = 0; i < config.database.collections.length; i++) {
+      window.store._initialize(config.database.collections[i]);
+    }
+  }
+
   return null;
-};
+}
 
 const HttpService = () => {
   return /*#__PURE__*/React.createElement(HTTP, null);
@@ -676,8 +669,8 @@ const HashService = () => {
 const CoreService = () => {
   return /*#__PURE__*/React.createElement(Core_Service, null);
 };
-const StoreService = () => {
-  return /*#__PURE__*/React.createElement(Store_Service, null);
+const StoreService = config => {
+  return Store_Service(config);
 };
 
 export { CoreService, HashService, HttpService, RenderService, StoreService };

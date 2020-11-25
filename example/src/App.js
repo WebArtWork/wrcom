@@ -1,12 +1,19 @@
 import React from 'react'
 
-import {HttpService, RenderService, HashService, CoreService, StoreService} from 'wrcom'
+import {HttpService, RenderService, CoreService, StoreService, HashService} from 'wrcom'
 import 'wrcom/dist/index.css'
+
+
+import ExamplePage from './pages/example_page'
 
 class App  extends React.Component{
 	constructor (props){
-		super(props)
-		HttpService();
+		super(props);
+		StoreService({
+			database: {
+				collections: [{name: 'user'}]
+			}
+		});
 	}
 	render(){
 		return <div>
@@ -15,10 +22,10 @@ class App  extends React.Component{
 			<RenderService/>
 			<HashService/>
 			<CoreService/> 
-			<StoreService/>
+			 {/*<StoreService config={database: {collections: [{name: 'client'}]}}/>*/}
 
 			{/*PAGES*/}
-
+			<ExamplePage />
 		</div>
 	}
 }

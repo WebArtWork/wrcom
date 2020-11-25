@@ -1,45 +1,16 @@
 import React from 'react'
 
-export  const Hash_Service =()=>{
+export  function Hash_Service(){
 	const _replaces = [{
 		from: '%20',
 		to: ' '
 	}];
-		 hash = {};
-		 let _done = false;
-	window.hash = {
-		on: (field, cb = resp=>{})=>{
-			if(!_done) return setTimeout(()=>{ on(field, cb); }, 100);
-			cb(hash[field]);
-		},
-		save: ()=>{
-			let hash = '';
-			for(let each in hash){
-				if(hash) hash += '&';
-				hash += each + '=' + hash[each];
-			}
-			window.location.hash = hash;
-		},
-		set: (field, value)=>{
-			hash[field] = value;
-			save();
-		},
-		get: (field)=>{
-			return hash[field];
-		},
-		clear: (field)=>{
-			delete hash[field];
-			save();
-		}
-	}
-
-	if(!window.location.hash){
-		_done = true;
-		return null;
-	}
-
 	let hash:any = window.location.hash.replace('#!#', '').replace('#', '').split('&');
-	for(let i = 0; i < hash.length; i++){
+	for(let i =hash.length-1; i >=0 ; i--){
+		if(!hash[i]){
+			hash.splice(i, 1);
+			continue;
+		}
 		let holder = hash[i].split('=')[0];
 		let value = hash[i].split('=')[1];
 		for(let j = 0; j < _replaces.length; j++){
@@ -47,7 +18,34 @@ export  const Hash_Service =()=>{
 			value = value.split(_replaces[j].from).join(_replaces[j].to);
 		}
 		hash[holder] = value;
+
 	}
-	_done = true;	
+	window.hash = {
+		save: ()=>{
+			let new_hash = '';
+			for(const each in hash){	
+				//console.log(each)
+				if(new_hash) new_hash += '&';
+				new_hash += each+'='+hash[each];
+			}
+			if(history.pushState) {
+				history.pushState(null,null,'#'+new_hash); 
+			}
+			else {
+				location.hash = '#' + new_hash;
+			}
+		},
+		set: (field, value)=>{
+			hash[field] = value;
+			window.hash.save();
+		}, 
+		get: (field)=>{
+			return hash[field];
+		},
+		clear: (field)=>{
+			delete hash[field];
+			window.hash.save();
+		}
+	}
 	return null
 }
