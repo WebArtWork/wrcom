@@ -11,23 +11,33 @@ class App  extends React.Component{
 		super(props);
 		StoreService({
 			database: {
-				collections: [{name: 'user'}]
+				collections: [{
+					name: 'user',
+					opts: {
+						query: {
+							admin: (doc)=>{
+								return doc.is.admin;
+							}
+						},
+						groups: {}
+					}
+				}]
 			}
 		});
 	}
 	render(){
 		return <div>
-			{/*SERVICES*/}
-			<HttpService/>
-			<RenderService/>
-			<HashService/>
-			<CoreService/> 
-			 {/*<StoreService config={database: {collections: [{name: 'client'}]}}/>*/}
+	{/*SERVICES*/}
+	<HttpService/>
+	<RenderService/>
+	<HashService/>
+	<CoreService/> 
+{/*<StoreService config={database: {collections: [{name: 'client'}]}}/>*/}
 
-			{/*PAGES*/}
-			<ExamplePage />
-		</div>
-	}
+{/*PAGES*/}
+<ExamplePage />
+</div>
+}
 }
 
 export default App

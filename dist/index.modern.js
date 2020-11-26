@@ -74,7 +74,10 @@ function Hash_Service() {
       let new_hash = '';
 
       for (const each in hash) {
-        if (new_hash) new_hash += '&';
+        if (new_hash) {
+          new_hash += '&';
+        }
+        console.log(hash[each]);
         new_hash += each + '=' + hash[each];
       }
 
@@ -366,14 +369,18 @@ function Store_Service(config) {
       let docs = [];
 
       for (let each in _data[type].by_id) {
-        docs.push(each);
+        if (each) docs.push(each);
       }
 
       window.store.set(type + '_docs', JSON.stringify(docs));
     },
     _add_doc: (type, doc) => {
-      for (let each in doc) {
-        _data[type].by_id[doc[_id]][each] = doc[each];
+      if (!_data[type].by_id[doc[_id]]) {
+        _data[type].by_id[doc[_id]] = doc;
+      } else {
+        for (let each in doc) {
+          _data[type].by_id[doc[_id]][each] = doc[each];
+        }
       }
 
       let add = true;
@@ -446,7 +453,7 @@ function Store_Service(config) {
       if (!collection.groups) collection.groups = {};
       if (!collection.query) collection.query = [];
 
-      if (collection.opts.query) {
+      if (collection.query) {
         for (let key in collection.opts.query) {
           if (typeof collection.opts.query[key] == 'function') {
             collection.opts.query[key] = {
@@ -504,6 +511,7 @@ function Store_Service(config) {
         _data[type].by_id[_id][_id] = _id;
         window.store.get(type + '_' + _id, doc => {
           if (!doc) return;
+          doc = JSON.parse(doc);
 
           for (let each in doc) {
             _data[type].by_id[_id][each] = doc[each];
@@ -533,13 +541,18 @@ function Store_Service(config) {
         }
       }
 
-      window.store.set(type + '_' + doc[_id], doc);
+      window.store.set(type + '_' + doc[_id], JSON.stringify(doc));
 
       window.store._add_doc(type, doc);
 
       window.store._set_docs(type);
 
       return _data[type].by_id[doc[_id]];
+    },
+    set_docs: (type, docs) => {
+      for (let i = 0; i < docs.length; i++) {
+        window.store.set_doc(type, docs[i]);
+      }
     },
 
     remove_doc(type, _id) {

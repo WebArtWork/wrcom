@@ -23,10 +23,12 @@ export  function Hash_Service(){
 	window.hash = {
 		save: ()=>{
 			let new_hash = '';
+			// console.log(new_hash)
 			for(const each in hash){	
-				//console.log(each)
-				if(new_hash) new_hash += '&';
-				new_hash += each+'='+hash[each];
+			//console.log(each)
+				if(new_hash) { new_hash += '&'};
+					console.log(hash[each])
+					new_hash += each+'='+hash[each];
 			}
 			if(history.pushState) {
 				history.pushState(null,null,'#'+new_hash); 

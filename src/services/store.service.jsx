@@ -3,7 +3,7 @@ export  function Store_Service(config){
 	let _db:any = null;
 	let _data:any = {};
 	let _id = '_id';
-			if(!config.database) config.database={};
+	if(!config.database) config.database={};
 	if(config.database._id) _id = config.database._id;
 	// /* SQL Management*/
 	document.addEventListener('deviceready', () => {
@@ -101,19 +101,18 @@ export  function Store_Service(config){
 		_set_docs:(type)=>{
 			let docs = [];
 			for (let each in _data[type].by_id){
-				docs.push(each);
+				if(each) docs.push(each);
 			}
 			window.store.set(type+'_docs', JSON.stringify(docs));
 		},
-		// set_docs:(type:string, docs:any)=>{
-		// 	for (let i = 0; i < docs.length; i++) {
-		// 		window.store.set_doc(type, docs[i])
-		// },
 		_add_doc:(type, doc)=>{
 			// replace existed
-			for (let each in doc){
-				// console.log(doc[each])
-				_data[type].by_id[doc[_id]][each] = doc[each];
+			if(!_data[type].by_id[doc[_id]]){
+				_data[type].by_id[doc[_id]]=doc;
+			}else{	
+				for (let each in doc){
+					_data[type].by_id[doc[_id]][each] = doc[each];	
+				}
 			}
 			// manage all
 			let add = true;
@@ -157,8 +156,8 @@ export  function Store_Service(config){
 						// if exists, skip push
 						add = true;
 						_data[type].groups.forEach(selected=>{
-						if(selected[_id] == doc[_id]) add = false;
-					});
+							if(selected[_id] == doc[_id]) add = false;
+						});
 						if(add) _data[type].groups[key][field].push(_data[type].by_id[doc[_id]]);
 						if(groups.sort) sort(_data[type].groups[key][field], groups.sort);
 					}
@@ -174,7 +173,7 @@ export  function Store_Service(config){
 			if(!collection.by_id) collection.by_id={};
 			if(!collection.groups) collection.groups={};
 			if(!collection.query) collection.query=[];
-			if(collection.opts.query){
+			if(collection.query){
 				for(let key in collection.opts.query){
 					if(typeof collection.opts.query[key] == 'function'){
 						collection.opts.query[key] = {
@@ -211,19 +210,21 @@ export  function Store_Service(config){
 				}
 			});
 		},
-		all: (type:string, doc:object)=>{ return _data[type].all; },
-		query: (type:string, doc:object)=>{ return _data[type].query; },
-		groups: (type:string, doc:object)=>{ return _data[type].groups; },
+		all: (type:string, doc:object)=>{return _data[type].all;},
+		query: (type:string, doc:object)=>{return _data[type].query;},
+		groups: (type:string, doc:object)=>{ return _data[type].groups;},
 		get_doc:(type:string, _id:string)=>{
 			if(!_data[type].by_id[_id]){
 				_data[type].by_id[_id] = {};
 				_data[type].by_id[_id][_id] = _id;
 				window.store.get(type+'_'+_id, doc=>{
 					if(!doc) return;
+					doc = JSON.parse(doc);
+					//console.log(doc);
 					for (let each in doc){
-						_data[type].by_id[_id][each] = doc[each]
+						_data[type].by_id[_id][each] = doc[each] 
 					}
-				});
+				});					
 			}
 			return _data[type].by_id[_id];
 		},
@@ -245,10 +246,15 @@ export  function Store_Service(config){
 					}
 				}
 			}
-			window.store.set(type+'_'+doc[_id], doc);
-			window.store._add_doc(type, doc);
+			window.store.set(type+'_'+doc[_id], JSON.stringify(doc));
+			window.store._add_doc(type,  doc);
 			window.store._set_docs(type);
 			return _data[type].by_id[doc[_id]];
+		},
+		set_docs:(type:string, docs:any)=>{
+			for (let i = 0; i < docs.length; i++) {
+				window.store.set_doc(type, docs[i])
+			}
 		},
 		remove_doc(type:string, _id:string){
 			window.store.remove(type+'_'+_id);
