@@ -19,7 +19,11 @@ class App  extends React.Component{
 								return doc.is.admin;
 							}
 						},
-						groups: {}
+						groups: {
+							admin: (doc)=>{
+								return doc.is.admin;
+							}
+						}
 					}
 				}]
 			}
@@ -32,7 +36,6 @@ class App  extends React.Component{
 	<RenderService/>
 	<HashService/>
 	<CoreService/> 
-{/*<StoreService config={database: {collections: [{name: 'client'}]}}/>*/}
 
 {/*PAGES*/}
 <ExamplePage />

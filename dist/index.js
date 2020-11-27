@@ -91,8 +91,7 @@ function Hash_Service() {
         if (new_hash) {
           new_hash += '&';
         }
-        console.log(hash[each]);
-        new_hash += each + '=' + hash[each];
+        new_hash = each + '=' + hash[each];
       }
 
       if (history.pushState) {
@@ -116,12 +115,16 @@ function Hash_Service() {
   return null;
 }
 
-var Core_Service = function Core_Service() {
+var Core_Service = function Core_Service(router) {
   var host = window.location.host.toLowerCase();
   var _afterWhile2 = {};
   var _cb = {};
   var _ids = {};
   var _done_next = {};
+  var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+  if (/windows phone/i.test(userAgent)) ; else if (/android/i.test(userAgent)) ; else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) ;
+
   window.core = {
     _serial_process: function (_serial_process2) {
       function _serial_process(_x, _x2, _x3) {
@@ -141,7 +144,7 @@ var Core_Service = function Core_Service() {
     }),
     set_version: function set_version(version) {
       document.addEventListener('deviceready', function () {
-        done('mobile');
+        window.core.done('mobile');
 
         if (cordova && cordova.getAppVersion) {
           cordova.getAppVersion.getVersionNumber(function (version) {
@@ -160,7 +163,7 @@ var Core_Service = function Core_Service() {
       }
     },
     serial: function serial(arr, callback) {
-      _serial_process(0, arr, callback);
+      window.core._serial_process(0, arr, callback);
     },
     each: function each(arrOrObj, func, callback, isSerial) {
       if (isSerial === void 0) {
@@ -195,7 +198,7 @@ var Core_Service = function Core_Service() {
               _loop(i);
             }
 
-            _serial_process(0, serialArr, callback);
+            window.core._serial_process(0, serialArr, callback);
           } else {
             for (var _i = 0; _i < arrOrObj.length; _i++) {
               func(arrOrObj[_i], function () {
@@ -233,7 +236,7 @@ var Core_Service = function Core_Service() {
               _loop2(i);
             }
 
-            _serial_process(0, serialArr, callback);
+            window.core._serial_process(0, serialArr, callback);
           })();
         } else {
           (function () {
@@ -328,11 +331,7 @@ var Core_Service = function Core_Service() {
       }
     })
   };
-  var userAgent = navigator.userAgent || navigator.vendor || window.opera;
-
-  if (/windows phone/i.test(userAgent)) ; else if (/android/i.test(userAgent)) ; else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) ;
-
-  core.set_version();
+  window.core.set_version();
   return null;
 };
 
@@ -509,7 +508,7 @@ function Store_Service(config) {
 
           add = true;
 
-          _data[type].query.forEach(function (selected) {
+          _data[type].query[key].forEach(function (selected) {
             if (selected[_id] == doc[_id]) add = false;
           });
 
@@ -574,13 +573,13 @@ function Store_Service(config) {
         }
       }
 
-      if (collection.opts.groups) {
+      if (collection.groups) {
         if (typeof collection.opts.groups == 'string') {
           collection.opts.groups = collection.opts.groups.split(' ');
         }
 
         var _loop2 = function _loop2(_key2) {
-          if (typeof collection.opts.groups[_key2] == 'boolean' && collection.opts.groups[_key2]) {
+          if (typeof collection.groups[_key2] == 'boolean' && typeof collection.opts.groups[_key2]) {
             collection.opts.groups[_key2] = {
               field: function field(doc) {
                 return doc[_key2];
@@ -588,7 +587,7 @@ function Store_Service(config) {
             };
           }
 
-          if (typeof collection.opts.groups[_key2] != 'object' || typeof collection.opts.groups[_key2].field != 'function') {
+          if (typeof collection.groups[_key2] != 'object' || typeof collection.opts.groups[_key2].field != 'function') {
             delete collection.opts.groups[_key2];
             return "continue";
           }
@@ -602,7 +601,6 @@ function Store_Service(config) {
           if (_ret2 === "continue") continue;
         }
       }
-
       _data[collection.name] = collection;
       window.store.get(collection.name + '_docs', function (docs) {
         if (!docs) return;
@@ -802,8 +800,8 @@ var RenderService = function RenderService() {
 var HashService = function HashService() {
   return /*#__PURE__*/React.createElement(Hash_Service, null);
 };
-var CoreService = function CoreService() {
-  return /*#__PURE__*/React.createElement(Core_Service, null);
+var CoreService = function CoreService(router) {
+  return Core_Service();
 };
 var StoreService = function StoreService(config) {
   return Store_Service(config);

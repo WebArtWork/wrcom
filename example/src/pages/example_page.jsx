@@ -27,19 +27,17 @@ class ExamplePage extends React.Component{
 			window.store.set_docs('user', users);
 		});
 		// admin users page
-		let allusers = window.store.all('user');
+		//let allusers = window.store.all('user');
 		//console.log(allusers);
 		let queryusers = window.store.query('user');
-		//console.log(queryusers);
-		// let groupsusers = window.store.groups('user');
-		// console.log(groupsusers);
-		//window.location.hash = 'abs c'
-		//let x = window.location.hash;
+		console.log(queryusers);
+		let groupsusers = window.store.groups('user');
+		console.log(groupsusers);
 		// let tab = window.hash.get('tab') || 'Home';
 		// console.log(tab);
 		// window.hash.set('tab', 'Family');
 		//window.hash.clear('tab');
-		let getUser = window.store.get_doc('user', "5faaa89a99e7ef126489a0ea");
+		//let getUser = window.store.get_doc('user', "5faaa89a99e7ef126489a0ea");
 		//console.log(getUser);
 		return  (<div>
 			<button onClick ={this.AddUser}>Add User</button></div>)

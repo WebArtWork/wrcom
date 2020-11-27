@@ -77,8 +77,7 @@ function Hash_Service() {
         if (new_hash) {
           new_hash += '&';
         }
-        console.log(hash[each]);
-        new_hash += each + '=' + hash[each];
+        new_hash = each + '=' + hash[each];
       }
 
       if (history.pushState) {
@@ -102,12 +101,16 @@ function Hash_Service() {
   return null;
 }
 
-const Core_Service = () => {
+const Core_Service = router => {
   let host = window.location.host.toLowerCase();
   let _afterWhile = {};
   let _cb = {};
   let _ids = {};
   let _done_next = {};
+  var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+  if (/windows phone/i.test(userAgent)) ; else if (/android/i.test(userAgent)) ; else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) ;
+
   window.core = {
     _serial_process: (i, arr, callback) => {
       if (i >= arr.length) return callback();
@@ -118,7 +121,7 @@ const Core_Service = () => {
     set_version: (version = '1.0.0') => {
       version = version;
       document.addEventListener('deviceready', () => {
-        done('mobile');
+        window.core.done('mobile');
 
         if (cordova && cordova.getAppVersion) {
           cordova.getAppVersion.getVersionNumber(version => {
@@ -137,7 +140,7 @@ const Core_Service = () => {
       }
     },
     serial: (arr, callback) => {
-      _serial_process(0, arr, callback);
+      window.core._serial_process(0, arr, callback);
     },
     each: (arrOrObj, func, callback, isSerial = false) => {
       if (typeof callback == 'boolean') {
@@ -161,7 +164,7 @@ const Core_Service = () => {
             });
           }
 
-          _serial_process(0, serialArr, callback);
+          window.core._serial_process(0, serialArr, callback);
         } else {
           for (let i = 0; i < arrOrObj.length; i++) {
             func(arrOrObj[i], function () {
@@ -191,7 +194,7 @@ const Core_Service = () => {
             });
           }
 
-          _serial_process(0, serialArr, callback);
+          window.core._serial_process(0, serialArr, callback);
         } else {
           let counter = 1;
 
@@ -255,11 +258,7 @@ const Core_Service = () => {
       }
     }
   };
-  var userAgent = navigator.userAgent || navigator.vendor || window.opera;
-
-  if (/windows phone/i.test(userAgent)) ; else if (/android/i.test(userAgent)) ; else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) ;
-
-  core.set_version();
+  window.core.set_version();
   return null;
 };
 
@@ -404,7 +403,7 @@ function Store_Service(config) {
 
           add = true;
 
-          _data[type].query.forEach(selected => {
+          _data[type].query[key].forEach(selected => {
             if (selected[_id] == doc[_id]) add = false;
           });
 
@@ -463,13 +462,13 @@ function Store_Service(config) {
         }
       }
 
-      if (collection.opts.groups) {
+      if (collection.groups) {
         if (typeof collection.opts.groups == 'string') {
           collection.opts.groups = collection.opts.groups.split(' ');
         }
 
         for (let key in collection.opts.groups) {
-          if (typeof collection.opts.groups[key] == 'boolean' && collection.opts.groups[key]) {
+          if (typeof collection.groups[key] == 'boolean' && typeof collection.opts.groups[key]) {
             collection.opts.groups[key] = {
               field: function (doc) {
                 return doc[key];
@@ -477,7 +476,7 @@ function Store_Service(config) {
             };
           }
 
-          if (typeof collection.opts.groups[key] != 'object' || typeof collection.opts.groups[key].field != 'function') {
+          if (typeof collection.groups[key] != 'object' || typeof collection.opts.groups[key].field != 'function') {
             delete collection.opts.groups[key];
             continue;
           }
@@ -485,7 +484,6 @@ function Store_Service(config) {
           collection.groups[key] = {};
         }
       }
-
       _data[collection.name] = collection;
       window.store.get(collection.name + '_docs', docs => {
         if (!docs) return;
@@ -679,8 +677,8 @@ const RenderService = () => {
 const HashService = () => {
   return /*#__PURE__*/React.createElement(Hash_Service, null);
 };
-const CoreService = () => {
-  return /*#__PURE__*/React.createElement(Core_Service, null);
+const CoreService = router => {
+  return Core_Service();
 };
 const StoreService = config => {
   return Store_Service(config);

@@ -2,13 +2,24 @@
 declare var window:any;
 declare var cordova:any;
 
-export const Core_Service =()=> {
+export const Core_Service =(router)=> {
+	let host:any = window.location.host.toLowerCase();
+	let	_afterWhile:any = {}; 
+	let _cb:any = {};
+	let _ids:any = {};
+	let _done_next:any = {};
+	let device:any;
+	let version:any;
 
-		let host:any = window.location.host.toLowerCase();
-		let	_afterWhile:any = {}; 
-		let _cb:any = {};
-		let _ids:any = {};
-		let _done_next:any = {};
+	var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+	if (/windows phone/i.test(userAgent)) {
+		device = "windows";
+	}else if (/android/i.test(userAgent)) {
+		device = "android";
+	}else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+		device = "ios";
+	}else device = "web";
+
 	window.core ={
 		_serial_process: (i, arr, callback)=>{
 			if(i>=arr.length) return callback();
@@ -19,7 +30,7 @@ export const Core_Service =()=> {
 		set_version:(version='1.0.0')=>{
 			version = version;
 			document.addEventListener('deviceready', () => {
-				done('mobile');
+				window.core.done('mobile');
 				if(cordova && cordova.getAppVersion){
 					cordova.getAppVersion.getVersionNumber((version)=>{
 						version = version;
@@ -27,7 +38,6 @@ export const Core_Service =()=> {
 				}
 			});
 		},
-	
 		parallel:(arr, callback)=>{
 			let counter = arr.length;
 			if(counter===0) return callback();
@@ -38,7 +48,7 @@ export const Core_Service =()=> {
 			}
 		},
 		serial:(arr, callback)=>{
-			_serial_process(0, arr, callback);
+			window.core._serial_process(0, arr, callback);
 		},
 		each:(arrOrObj, func, callback, isSerial=false)=>{
 			if(typeof callback == 'boolean'){
@@ -58,7 +68,7 @@ export const Core_Service =()=> {
 							}, i);
 						});
 					}
-					_serial_process(0, serialArr, callback);
+					window.core._serial_process(0, serialArr, callback);
 				}else{
 					for (let i = 0; i < arrOrObj.length; i++) {
 						func(arrOrObj[i], function(){
@@ -85,7 +95,7 @@ export const Core_Service =()=> {
 							}, i);
 						});
 					}
-					_serial_process(0, serialArr, callback);
+					window.core._serial_process(0, serialArr, callback);
 				}else{
 					let counter = 1;
 					for(let each in arrOrObj){
@@ -98,7 +108,7 @@ export const Core_Service =()=> {
 				}
 			}else callback();
 		},
-	
+
 		_afterWhile:(doc, _cb, time=1000)=>{
 			if(typeof doc == 'function'){
 				_cb = doc;
@@ -122,7 +132,7 @@ export const Core_Service =()=> {
 				}
 			}
 		},
-	
+
 		on:(signal, _cb)=>{
 			let id = Math.floor(Math.random() * Date.now()) + 1;
 			if(_ids[id]) return on(signal, _cb);
@@ -134,7 +144,7 @@ export const Core_Service =()=> {
 			}
 		},
 		/* once Signal when something is ready */
-	
+
 		done:(signal)=> {
 			_done_next[signal] = true;
 		},
@@ -148,19 +158,7 @@ export const Core_Service =()=> {
 			}
 		}
 	}
-		//constructor(router: Router) {
-			var userAgent = navigator.userAgent || navigator.vendor || window.opera;
-			if (/windows phone/i.test(userAgent)) {
-				device = "windows";
-			}else if (/android/i.test(userAgent)) {
-				device = "android";
-			}else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-				device = "ios";
-			}else device = "web";
-			core.set_version();
-			let device:any;
-			let version:any;
-	// //}	
+	window.core.set_version();
 	return null
 
 }

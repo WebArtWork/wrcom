@@ -132,13 +132,14 @@ export  function Store_Service(config){
 						_data[type].query[key] = [];
 					}					
 					add = true;
-					_data[type].query.forEach(selected=>{
+					_data[type].query[key].forEach(selected=>{
+
 						if(selected[_id] == doc[_id]) add = false;
 					});
 					if(add) _data[type].query[key].push(_data[type].by_id[doc[_id]]);
 					if(query.sort) sort(_data[type].query[key], query.sort);
 				}
-			}
+			};
 			// manage groups
 			if(_data[type].opts.groups){
 				for(let key in _data[type].opts.groups){
@@ -148,12 +149,12 @@ export  function Store_Service(config){
 					if(!_data[type].groups[key]){
 						_data[type].groups[key] = {};
 					}
-					let set = field => {
+
+					let set = (field) => {
 						if(!field) return;
 						if(!Array.isArray(_data[type].groups[key][field])){
 							_data[type].groups[key][field] = [];
 						}
-						// if exists, skip push
 						add = true;
 						_data[type].groups.forEach(selected=>{
 							if(selected[_id] == doc[_id]) add = false;
@@ -181,26 +182,46 @@ export  function Store_Service(config){
 						}
 					}
 				}
-			}
-			if(collection.opts.groups){
+			};
+			if(collection.groups){
 				if(typeof collection.opts.groups == 'string'){
 					collection.opts.groups = collection.opts.groups.split(' ');
 				}
+
+				// if(Array.isArray(collection.opts.groups)){
+				// 	let arr = collection.opts.groups;
+				// 	collection.opts.groups = {};
+				// 	for(let i = 0; i < arr.length; i++){
+				// 		if(typeof arr[i] == 'string'){
+				// 			collection.opts.groups[arr[i]] = true;
+				// 		}else {
+				// 			for(let key in arr[i]){
+				// 				if(typeof arr[i][key] == 'function'){
+				// 					arr[i][key] = {
+				// 						field: arr[i][key]
+				// 					}
+				// 				}
+				// 			collection.opts.groups[key] = arr[i][key];
+				// 			}
+				// 		}
+				// 	 }
+				// }
+
 				for(let key in collection.opts.groups){
-					if(typeof collection.opts.groups[key] == 'boolean' && collection.opts.groups[key]){
+					if(typeof collection.groups[key] == 'boolean' && typeof collection.opts.groups[key]){
 						collection.opts.groups[key] = {
 							field: function(doc){
 								return doc[key];
 							}
 						}
 					}
-					if(typeof collection.opts.groups[key] != 'object' || typeof collection.opts.groups[key].field != 'function'){
+					if(typeof collection.groups[key] != 'object' || typeof collection.opts.groups[key].field != 'function'){
 						delete collection.opts.groups[key];
 						continue;
 					}
 					collection.groups[key] = {};
 				}
-			}
+			};
 			_data[collection.name] = collection;
 			window.store.get(collection.name+'_docs', docs=>{
 				if(!docs) return;
@@ -212,7 +233,7 @@ export  function Store_Service(config){
 		},
 		all: (type:string, doc:object)=>{return _data[type].all;},
 		query: (type:string, doc:object)=>{return _data[type].query;},
-		groups: (type:string, doc:object)=>{ return _data[type].groups;},
+		groups: (type:string, doc:object)=>{return _data[type].groups;},
 		get_doc:(type:string, _id:string)=>{
 			if(!_data[type].by_id[_id]){
 				_data[type].by_id[_id] = {};
@@ -220,7 +241,6 @@ export  function Store_Service(config){
 				window.store.get(type+'_'+_id, doc=>{
 					if(!doc) return;
 					doc = JSON.parse(doc);
-					//console.log(doc);
 					for (let each in doc){
 						_data[type].by_id[_id][each] = doc[each] 
 					}
@@ -371,7 +391,6 @@ export  function Store_Service(config){
 			}
 		}
 	}
-
 	if(Array.isArray(config.database.collections)){
 		for (let i = 0; i < config.database.collections.length; i++){
 			window.store._initialize(config.database.collections[i]);

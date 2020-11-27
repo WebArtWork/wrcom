@@ -15,8 +15,8 @@ export const RenderService =()=>{
 export const HashService =()=>{
 	return <Hash_Service />
 }
-export const CoreService =()=>{
-	return <Core_Service />
+export const CoreService =(router)=>{
+	return Core_Service(router)
 }
 export const StoreService =(config)=>{
 	return Store_Service(config)
