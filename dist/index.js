@@ -1,6 +1,4 @@
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
-var React = _interopDefault(require('react'));
+require('react');
 
 var HTTP = function HTTP() {
   window.http = {
@@ -442,7 +440,7 @@ function Store_Service(config) {
 
         _db.executeSql('DELETE FROM Data where hold=?', [hold], cb, errcb);
       } else {
-        localStorage.removeItem('waw_temp_storage_' + hold);
+        window.localStorage.removeItem('waw_temp_storage_' + hold);
         cb();
       }
     },
@@ -455,7 +453,7 @@ function Store_Service(config) {
         errcb = function errcb() {};
       }
 
-      localStorage.clear();
+      window.localStorage.clear();
 
       if (window.sqlitePlugin) {
         if (!db) {
@@ -536,7 +534,7 @@ function Store_Service(config) {
 
             add = true;
 
-            _data[type].groups.forEach(function (selected) {
+            _data[type].groups[_key][field].forEach(function (selected) {
               if (selected[_id] == doc[_id]) add = false;
             });
 
@@ -575,28 +573,55 @@ function Store_Service(config) {
 
       if (collection.groups) {
         if (typeof collection.opts.groups == 'string') {
-          collection.opts.groups = collection.opts.groups.split(' ');
+          collection.groups = collection.groups.split(' ');
         }
 
-        var _loop2 = function _loop2(_key2) {
-          if (typeof collection.groups[_key2] == 'boolean' && typeof collection.opts.groups[_key2]) {
-            collection.opts.groups[_key2] = {
+        if (Array.isArray(collection.opts.groups)) {
+          var arr = collection.opts.groups;
+          collection.opts.groups = {};
+
+          for (var i = 0; i < arr.length; i++) {
+            if (typeof arr[i] == 'string') {
+              collection.opts.groups[arr[i]] = true;
+            } else {
+              for (var _key2 in arr[i]) {
+                if (typeof arr[i][_key2] == 'function') {
+                  arr[i][_key2] = {
+                    field: arr[i][_key2]
+                  };
+                }
+
+                collection.opts.groups[_key2] = arr[i][_key2];
+              }
+            }
+          }
+        }
+
+        var _loop2 = function _loop2(_key3) {
+          if (typeof collection.opts.groups[_key3] == 'boolean' && typeof collection.opts.groups[_key3]) {
+            collection.opts.groups[_key3] = {
               field: function field(doc) {
-                return doc[_key2];
+                return doc[_key3];
               }
             };
           }
 
-          if (typeof collection.groups[_key2] != 'object' || typeof collection.opts.groups[_key2].field != 'function') {
-            delete collection.opts.groups[_key2];
+          if (typeof collection.opts.groups[_key3] == 'function' && typeof collection.opts.groups[_key3]) {
+            collection.opts.groups[_key3] = {
+              field: collection.opts.groups[_key3]
+            };
+          }
+
+          if (typeof collection.opts.groups[_key3] != 'object' || typeof collection.opts.groups[_key3].field != 'function') {
+            delete collection.opts.groups[_key3];
             return "continue";
           }
 
-          collection.groups[_key2] = {};
+          collection.groups[_key3] = {};
         };
 
-        for (var _key2 in collection.opts.groups) {
-          var _ret2 = _loop2(_key2);
+        for (var _key3 in collection.opts.groups) {
+          var _ret2 = _loop2(_key3);
 
           if (_ret2 === "continue") continue;
         }
@@ -606,13 +631,16 @@ function Store_Service(config) {
         if (!docs) return;
         docs = JSON.parse(docs);
 
-        for (var i = 0; i < docs.length; i++) {
-          window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
+        for (var _i = 0; _i < docs.length; _i++) {
+          window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[_i]));
         }
       });
     },
     all: function all(type, doc) {
       return _data[type].all;
+    },
+    by_id: function by_id(type, doc) {
+      return _data[type].by_id;
     },
     query: function query(type, doc) {
       return _data[type].query;
@@ -787,18 +815,337 @@ function Store_Service(config) {
       window.store._initialize(config.database.collections[i]);
     }
   }
-
-  return null;
 }
 
+var _this = undefined;
+var Mongo_Service = function Mongo_Service() {
+  window.mongo = {
+    create: function create(part, doc, cb, opts) {
+      if (doc === void 0) {
+        doc = undefined;
+      }
+
+      if (cb === void 0) {
+        cb = undefined;
+      }
+
+      if (opts === void 0) {
+        opts = {};
+      }
+
+      if (typeof doc == 'function') {
+        if (cb) opts = cb;
+        cb = doc;
+        doc = {};
+      }
+
+      if (typeof opts == 'function') {
+        opts = {
+          err: opts
+        };
+      }
+
+      if (typeof doc != 'object') doc = {};
+      if (doc.___created && !opts.allow_multiple) return;
+      doc.___created = true;
+      window.http.post(opts.url || '/api/' + part + '/create', doc || {}, function (resp) {
+        if (resp) {
+          if (typeof cb == 'function') cb(resp);
+        } else if (typeof cb == 'function') {
+          cb(false);
+        }
+      }, opts);
+    },
+    fetch: function fetch(part, opts, cb) {
+      if (opts === void 0) {
+        opts = undefined;
+      }
+
+      if (cb === void 0) {
+        cb = undefined;
+      }
+
+      if (typeof opts == 'string') {
+        opts = {
+          query: {
+            _id: opts
+          }
+        };
+      }
+
+      if (typeof opts == 'function') {
+        cb = opts;
+        opts = {};
+      }
+
+      if (opts._id) {
+        opts.query = {
+          _id: opts._id
+        };
+      }
+
+      if (!opts) opts = {};
+      if (!cb) cb = function cb(server_doc) {};
+      var url = '/api/' + part + '/fetch' + (opts.name || '');
+      var doc = {};
+
+      if (opts._id) {
+        doc = window.store.get_doc('user', opts._id);
+      }
+
+      window.http.post(opts.url || url, opts.query || {}, function (server_doc) {
+        cb(server_doc);
+        window.render.call();
+      });
+      return doc;
+    },
+    get: function get(part, opts, cb) {
+      if (opts === void 0) {
+        opts = undefined;
+      }
+
+      if (typeof opts == 'function') {
+        opts = {};
+      }
+
+      if (!opts) opts = {};
+      var url = '/api/' + part + '/get' + (opts.name || '') + (opts.param || '');
+      window.http.get(opts.url || url, function (resp) {
+        window.store.set_docs(part, resp);
+      }, opts);
+      return {
+        all: window.store.all(part),
+        by_id: window.store.by_id(part),
+        query: window.store.query(part),
+        groups: window.store.groups(part)
+      };
+    },
+    _prepare_update: function _prepare_update(part, doc, opts) {
+      if (opts.fields) {
+        if (typeof opts.fields == 'string') opts.fields = opts.fields.split(' ');
+        var _doc = {};
+
+        for (var i = 0; i < opts.fields.length; i++) {
+          _doc[opts.fields[i]] = doc[opts.fields[i]];
+        }
+
+        doc = _doc;
+      }
+
+      if (typeof opts.replace == 'object' && Object.values(opts.replace).length) {
+        for (var key in opts.replace) {
+          _this.replace(doc, key, opts.replace[key]);
+        }
+      }
+
+      if (typeof opts.rewrite == 'object' && Object.values(opts.rewrite).length) {
+        doc = JSON.parse(JSON.stringify(doc));
+
+        for (var _key in opts.rewrite) {
+          _this.replace(doc, _key, opts.rewrite[_key]);
+        }
+      }
+
+      return doc;
+    },
+    update: function update(part, doc, opts, cb) {
+      if (opts === void 0) {
+        opts = undefined;
+      }
+
+      if (cb === void 0) {
+        cb = undefined;
+      }
+
+      if (typeof opts == 'function') {
+        cb = opts;
+        opts = {};
+      }
+
+      if (typeof opts != 'object') opts = {};
+      doc = window.mongo._prepare_update(part, doc, opts);
+      var url = '/api/' + part + '/update' + (opts.name || '');
+      window.http.post(opts.url || url, doc, function (resp) {
+
+        if (resp && typeof cb == 'function') {
+          cb(resp);
+        } else if (typeof cb == 'function') {
+          cb(false);
+        }
+      }, opts);
+    },
+    unique: function unique(part, doc, opts, cb) {
+      if (opts === void 0) {
+        opts = undefined;
+      }
+
+      if (cb === void 0) {
+        cb = undefined;
+      }
+
+      if (typeof opts == 'function') {
+        cb = opts;
+        opts = {};
+      }
+
+      if (typeof opts != 'object') opts = {};
+      doc = _this._prepare_update(part, doc, opts);
+      var url = '/api/' + part + '/unique' + (opts.name || '');
+      window.http.post(opts.url || url, doc, function (resp) {
+        if (resp) {
+          _this.socket.emit('update', {
+            _id: doc._id,
+            part: part
+          });
+
+          var current_doc = data['obj' + part][doc._id];
+
+          for (var each in doc) {
+            current_doc[each] = doc[each];
+          }
+
+          _this.renew(part, current_doc);
+        }
+
+        if (resp && typeof cb == 'function') {
+          cb(resp);
+        } else if (typeof cb == 'function') {
+          cb(false);
+        }
+      }, opts);
+    },
+    "delete": function _delete(part, doc, opts, cb) {
+      if (opts === void 0) {
+        opts = undefined;
+      }
+
+      if (cb === void 0) {
+        cb = undefined;
+      }
+
+      if (typeof opts == 'function') {
+        cb = opts;
+        opts = {};
+      }
+
+      if (typeof opts !== 'object') opts = {};
+
+      if (opts.fields) {
+        if (typeof opts.fields == 'string') opts.fields = opts.fields.split(' ');
+        var _doc = {};
+
+        for (var i = 0; i < opts.fields.length; i++) {
+          _doc[opts.fields[i]] = doc[opts.fields[i]];
+        }
+
+        doc = _doc;
+      } else {
+        doc = {
+          _id: doc._id
+        };
+      }
+
+      var url = '/api/' + part + '/delete' + (opts.name || '');
+      window.http.post(opts.url || url, doc, function (resp) {
+        if (resp) {
+          console.log('here');
+          window.store.remove(doc);
+        }
+
+        if (resp && typeof cb == 'function') {
+          cb(resp);
+        } else if (typeof cb == 'function') {
+          cb(false);
+        }
+      }, opts);
+    },
+    _id: function _id(cb) {
+      if (typeof cb == 'function') {
+        window.http.get('/waw/newId', cb);
+      }
+    },
+    on: function (_on) {
+      function on(_x, _x2) {
+        return _on.apply(this, arguments);
+      }
+
+      on.toString = function () {
+        return _on.toString();
+      };
+
+      return on;
+    }(function (parts, cb) {
+      if (typeof parts == 'string') {
+        parts = parts.split(" ");
+      }
+
+      for (var i = 0; i < parts.length; i++) {
+        if (!data['loaded' + parts[i]]) {
+          return setTimeout(function () {
+            on(parts, cb);
+          }, 100);
+        }
+      }
+
+      cb(data);
+    }),
+    renew: function renew(part, doc) {
+      if (!data['obj' + part][doc._id]) return _this.push(part, doc);
+
+      if (data['opts' + part].replace) {
+        for (var key in data['opts' + part].replace) {
+          replace(doc, key, data['opts' + part].replace[key]);
+        }
+      }
+    },
+    push: function push(part, doc) {
+      if (data['obj' + part][doc._id]) return _this.renew(part, doc);
+
+      if (data['opts' + part].replace) {
+        for (var key in _this.data['opts' + part].replace) {
+          _this.replace(doc, key, _this.data['opts' + part].replace[key]);
+        }
+      }
+
+      if (data['opts' + part].populate) {
+        var p = data['opts' + part].populate;
+
+        if (Array.isArray(p)) {
+          for (var i = 0; i < p.length; i++) {
+            if (typeof p == 'object' && p[i].field && p[i].part) {
+              populate(doc, p[i].field, p[i].part);
+            }
+          }
+        } else if (typeof p == 'object' && p.field && p.part) {
+          populate(doc, p.field, p.part);
+        }
+      }
+
+      data['arr' + part].push(doc);
+
+      if (data['opts' + part].sort) {
+        data['arr' + part].sort(data['opts' + part].sort);
+      }
+
+      data['obj' + part][doc._id] = doc;
+
+      if (Array.isArray(data['opts' + part].use)) {
+        for (var _i = 0; _i < data['opts' + part].use.length; _i++) {
+          data['obj' + part][doc[data['opts' + part].use[_i]]] = doc;
+        }
+      }
+    }
+  };
+};
+
 var HttpService = function HttpService() {
-  return /*#__PURE__*/React.createElement(HTTP, null);
+  return HTTP();
 };
 var RenderService = function RenderService() {
-  return /*#__PURE__*/React.createElement(Render, null);
+  return Render();
 };
 var HashService = function HashService() {
-  return /*#__PURE__*/React.createElement(Hash_Service, null);
+  return Hash_Service();
 };
 var CoreService = function CoreService(router) {
   return Core_Service();
@@ -806,10 +1153,14 @@ var CoreService = function CoreService(router) {
 var StoreService = function StoreService(config) {
   return Store_Service(config);
 };
+var MongoService = function MongoService() {
+  return Mongo_Service();
+};
 
 exports.CoreService = CoreService;
 exports.HashService = HashService;
 exports.HttpService = HttpService;
+exports.MongoService = MongoService;
 exports.RenderService = RenderService;
 exports.StoreService = StoreService;
 //# sourceMappingURL=index.js.map

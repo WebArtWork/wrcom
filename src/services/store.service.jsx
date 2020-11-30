@@ -2,6 +2,8 @@ export  function Store_Service(config){
 //export const Store_Service = function(config={}){
 	let _db:any = null;
 	let _data:any = {};
+
+
 	let _id = '_id';
 	if(!config.database) config.database={};
 	if(config.database._id) _id = config.database._id;
@@ -80,12 +82,12 @@ export  function Store_Service(config){
 					}, 100);
 				_db.executeSql('DELETE FROM Data where hold=?', [hold], cb, errcb);	
 			}else{
-				localStorage.removeItem('waw_temp_storage_'+hold);
+				window.localStorage.removeItem('waw_temp_storage_'+hold);
 				cb();
 			}
 		},
 		clear:(cb:any=()=>{}, errcb:any=()=>{})=>{
-			localStorage.clear();
+			window.localStorage.clear();
 			if(window.sqlitePlugin){
 				if(!db){
 					return setTimeout(()=>{
@@ -133,7 +135,6 @@ export  function Store_Service(config){
 					}					
 					add = true;
 					_data[type].query[key].forEach(selected=>{
-
 						if(selected[_id] == doc[_id]) add = false;
 					});
 					if(add) _data[type].query[key].push(_data[type].by_id[doc[_id]]);
@@ -142,6 +143,7 @@ export  function Store_Service(config){
 			};
 			// manage groups
 			if(_data[type].opts.groups){
+				//console.log('work', _data[type].opts.groups);
 				for(let key in _data[type].opts.groups){
 					let groups = _data[type].opts.groups[key];
 					if(typeof groups.ignore == 'function' && groups.ignore(doc)) continue;
@@ -149,14 +151,13 @@ export  function Store_Service(config){
 					if(!_data[type].groups[key]){
 						_data[type].groups[key] = {};
 					}
-
 					let set = (field) => {
 						if(!field) return;
 						if(!Array.isArray(_data[type].groups[key][field])){
 							_data[type].groups[key][field] = [];
 						}
 						add = true;
-						_data[type].groups.forEach(selected=>{
+						_data[type].groups[key][field].forEach(selected=>{
 							if(selected[_id] == doc[_id]) add = false;
 						});
 						if(add) _data[type].groups[key][field].push(_data[type].by_id[doc[_id]]);
@@ -185,43 +186,47 @@ export  function Store_Service(config){
 			};
 			if(collection.groups){
 				if(typeof collection.opts.groups == 'string'){
-					collection.opts.groups = collection.opts.groups.split(' ');
+					collection.groups = collection.groups.split(' ');  //забрав opts
 				}
-
-				// if(Array.isArray(collection.opts.groups)){
-				// 	let arr = collection.opts.groups;
-				// 	collection.opts.groups = {};
-				// 	for(let i = 0; i < arr.length; i++){
-				// 		if(typeof arr[i] == 'string'){
-				// 			collection.opts.groups[arr[i]] = true;
-				// 		}else {
-				// 			for(let key in arr[i]){
-				// 				if(typeof arr[i][key] == 'function'){
-				// 					arr[i][key] = {
-				// 						field: arr[i][key]
-				// 					}
-				// 				}
-				// 			collection.opts.groups[key] = arr[i][key];
-				// 			}
-				// 		}
-				// 	 }
-				// }
-
+				if(Array.isArray(collection.opts.groups)){
+					let arr = collection.opts.groups;
+					collection.opts.groups = {};
+					for(let i = 0; i < arr.length; i++){
+						if(typeof arr[i] == 'string'){
+							collection.opts.groups[arr[i]] = true;
+						}else {
+							for(let key in arr[i]){
+								if(typeof arr[i][key] == 'function'){
+									arr[i][key] = {
+										field: arr[i][key]
+									}
+								}
+								collection.opts.groups[key] = arr[i][key];
+							}
+						}
+					}
+				}
 				for(let key in collection.opts.groups){
-					if(typeof collection.groups[key] == 'boolean' && typeof collection.opts.groups[key]){
+					if(typeof collection.opts.groups[key] == 'boolean' && typeof collection.opts.groups[key]){
 						collection.opts.groups[key] = {
 							field: function(doc){
 								return doc[key];
 							}
 						}
 					}
-					if(typeof collection.groups[key] != 'object' || typeof collection.opts.groups[key].field != 'function'){
+					if(typeof collection.opts.groups[key] == 'function' && typeof collection.opts.groups[key]){
+						collection.opts.groups[key] = {
+							field: collection.opts.groups[key]
+						}
+					}
+					if(typeof collection.opts.groups[key] != 'object' || typeof collection.opts.groups[key].field != 'function'){
 						delete collection.opts.groups[key];
 						continue;
 					}
 					collection.groups[key] = {};
 				}
 			};
+
 			_data[collection.name] = collection;
 			window.store.get(collection.name+'_docs', docs=>{
 				if(!docs) return;
@@ -232,6 +237,7 @@ export  function Store_Service(config){
 			});
 		},
 		all: (type:string, doc:object)=>{return _data[type].all;},
+		by_id: (type:string, doc:object)=>{return _data[type].by_id;},
 		query: (type:string, doc:object)=>{return _data[type].query;},
 		groups: (type:string, doc:object)=>{return _data[type].groups;},
 		get_doc:(type:string, _id:string)=>{
@@ -396,6 +402,5 @@ export  function Store_Service(config){
 			window.store._initialize(config.database.collections[i]);
 		}
 	}
-	return null;
 }
 

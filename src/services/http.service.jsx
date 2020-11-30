@@ -19,5 +19,5 @@ export const HTTP =()=>{
 				}).then(callback);
 			}
 	}
-	return null
+	return null;
 }

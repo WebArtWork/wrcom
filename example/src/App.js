@@ -1,6 +1,6 @@
 import React from 'react'
 
-import {HttpService, RenderService, CoreService, StoreService, HashService} from 'wrcom'
+import {HttpService, RenderService, CoreService, StoreService, HashService, MongoService} from 'wrcom'
 import 'wrcom/dist/index.css'
 
 
@@ -12,6 +12,8 @@ class App  extends React.Component{
 		StoreService({
 			database: {
 				collections: [{
+					name: 'post'
+				}, {
 					name: 'user',
 					opts: {
 						query: {
@@ -28,6 +30,7 @@ class App  extends React.Component{
 				}]
 			}
 		});
+		MongoService();
 	}
 	render(){
 		return <div>
