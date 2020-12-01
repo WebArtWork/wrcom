@@ -2,9 +2,9 @@ export  function Store_Service(config){
 //export const Store_Service = function(config={}){
 	let _db:any = null;
 	let _data:any = {};
-
-
 	let _id = '_id';
+
+
 	if(!config.database) config.database={};
 	if(config.database._id) _id = config.database._id;
 	// /* SQL Management*/
@@ -107,7 +107,7 @@ export  function Store_Service(config){
 			}
 			window.store.set(type+'_docs', JSON.stringify(docs));
 		},
-		_add_doc:(type, doc)=>{
+		add_doc:(type, doc)=>{
 			// replace existed
 			if(!_data[type].by_id[doc[_id]]){
 				_data[type].by_id[doc[_id]]=doc;
@@ -143,7 +143,6 @@ export  function Store_Service(config){
 			};
 			// manage groups
 			if(_data[type].opts.groups){
-				//console.log('work', _data[type].opts.groups);
 				for(let key in _data[type].opts.groups){
 					let groups = _data[type].opts.groups[key];
 					if(typeof groups.ignore == 'function' && groups.ignore(doc)) continue;
@@ -232,7 +231,7 @@ export  function Store_Service(config){
 				if(!docs) return;
 				docs = JSON.parse(docs);
 				for (let i = 0; i < docs.length; i++){
-					window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
+					window.store.add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
 				}
 			});
 		},
@@ -273,7 +272,7 @@ export  function Store_Service(config){
 				}
 			}
 			window.store.set(type+'_'+doc[_id], JSON.stringify(doc));
-			window.store._add_doc(type,  doc);
+			window.store.add_doc(type,  doc);
 			window.store._set_docs(type);
 			return _data[type].by_id[doc[_id]];
 		},
@@ -284,8 +283,12 @@ export  function Store_Service(config){
 		},
 		remove_doc(type:string, _id:string){
 			window.store.remove(type+'_'+_id);
-			delete data[type].by_id[_id];
-			store_docs(type);
+			delete _data[type].by_id[_id];
+		},
+		remove_docs: (type:string, docs:any)=>{
+			for (let i = 0; i < docs.length; i++) {
+				window.store.remove_doc(type, docs[i])
+			}
 		},
 		/*Sorts Management*/
 		sortAscId:(id='_id')=>{

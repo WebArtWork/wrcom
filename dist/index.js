@@ -15,7 +15,11 @@ var HTTP = function HTTP() {
         body: JSON.stringify(doc)
       }).then(function (resp) {
         return resp.json();
-      }).then(callback);
+      }).then(callback).then(function (resp) {
+        console.log('Created Type is sent successfully');
+      })["catch"](function (err) {
+        console.log('Type send failed', err);
+      });
     },
     get: function get(url, callback, opts) {
       if (callback === void 0) {
@@ -115,7 +119,7 @@ function Hash_Service() {
 
 var Core_Service = function Core_Service(router) {
   var host = window.location.host.toLowerCase();
-  var _afterWhile2 = {};
+  var _afterWhile = {};
   var _cb = {};
   var _ids = {};
   var _done_next = {};
@@ -124,6 +128,26 @@ var Core_Service = function Core_Service(router) {
   if (/windows phone/i.test(userAgent)) ; else if (/android/i.test(userAgent)) ; else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) ;
 
   window.core = {
+    afterWhile: function afterWhile(doc, _cb, time) {
+      if (time === void 0) {
+        time = 1000;
+      }
+
+      if (typeof doc == 'function') {
+        _cb = doc;
+        doc = 'common';
+      }
+
+      if (typeof doc == 'string') {
+        if (!_afterWhile[doc]) _afterWhile[doc] = {};
+        doc = _afterWhile[doc];
+      }
+
+      if (typeof _cb == 'function' && typeof time == 'number') {
+        clearTimeout(doc.__updateTimeout);
+        doc.__updateTimeout = setTimeout(_cb, time);
+      }
+    },
     _serial_process: function (_serial_process2) {
       function _serial_process(_x, _x2, _x3) {
         return _serial_process2.apply(this, arguments);
@@ -251,26 +275,6 @@ var Core_Service = function Core_Service(router) {
           })();
         }
       } else callback();
-    },
-    _afterWhile: function _afterWhile(doc, _cb, time) {
-      if (time === void 0) {
-        time = 1000;
-      }
-
-      if (typeof doc == 'function') {
-        _cb = doc;
-        doc = 'common';
-      }
-
-      if (typeof doc == 'string') {
-        if (!_afterWhile2[doc]) _afterWhile2[doc] = {};
-        doc = _afterWhile2[doc];
-      }
-
-      if (typeof _cb == 'function' && typeof time == 'number') {
-        clearTimeout(doc.__updateTimeout);
-        doc.__updateTimeout = setTimeout(_cb, time);
-      }
     },
     emit: function emit(signal, doc) {
       if (doc === void 0) {
@@ -476,7 +480,7 @@ function Store_Service(config) {
 
       window.store.set(type + '_docs', JSON.stringify(docs));
     },
-    _add_doc: function _add_doc(type, doc) {
+    add_doc: function add_doc(type, doc) {
       if (!_data[type].by_id[doc[_id]]) {
         _data[type].by_id[doc[_id]] = doc;
       } else {
@@ -632,7 +636,7 @@ function Store_Service(config) {
         docs = JSON.parse(docs);
 
         for (var _i = 0; _i < docs.length; _i++) {
-          window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[_i]));
+          window.store.add_doc(collection.name, window.store.get_doc(collection.name, docs[_i]));
         }
       });
     },
@@ -685,8 +689,7 @@ function Store_Service(config) {
       }
 
       window.store.set(type + '_' + doc[_id], JSON.stringify(doc));
-
-      window.store._add_doc(type, doc);
+      window.store.add_doc(type, doc);
 
       window.store._set_docs(type);
 
@@ -699,8 +702,12 @@ function Store_Service(config) {
     },
     remove_doc: function remove_doc(type, _id) {
       window.store.remove(type + '_' + _id);
-      delete data[type].by_id[_id];
-      store_docs(type);
+      delete _data[type].by_id[_id];
+    },
+    remove_docs: function remove_docs(type, docs) {
+      for (var i = 0; i < docs.length; i++) {
+        window.store.remove_doc(type, docs[i]);
+      }
     },
     sortAscId: function sortAscId(id) {
       if (id === void 0) {
@@ -817,8 +824,8 @@ function Store_Service(config) {
   }
 }
 
-var _this = undefined;
 var Mongo_Service = function Mongo_Service() {
+  var _get = {};
   window.mongo = {
     create: function create(part, doc, cb, opts) {
       if (doc === void 0) {
@@ -850,6 +857,7 @@ var Mongo_Service = function Mongo_Service() {
       doc.___created = true;
       window.http.post(opts.url || '/api/' + part + '/create', doc || {}, function (resp) {
         if (resp) {
+          window.store.add_doc(part, doc);
           if (typeof cb == 'function') cb(resp);
         } else if (typeof cb == 'function') {
           cb(false);
@@ -895,6 +903,7 @@ var Mongo_Service = function Mongo_Service() {
 
       window.http.post(opts.url || url, opts.query || {}, function (server_doc) {
         cb(server_doc);
+        window.store.add_doc(part, server_doc);
         window.render.call();
       });
       return doc;
@@ -911,7 +920,9 @@ var Mongo_Service = function Mongo_Service() {
       if (!opts) opts = {};
       var url = '/api/' + part + '/get' + (opts.name || '') + (opts.param || '');
       window.http.get(opts.url || url, function (resp) {
+        window.store.remove_docs(part, resp);
         window.store.set_docs(part, resp);
+        _get[part] = true;
       }, opts);
       return {
         all: window.store.all(part),
@@ -921,6 +932,8 @@ var Mongo_Service = function Mongo_Service() {
       };
     },
     _prepare_update: function _prepare_update(part, doc, opts) {
+      window.store._add_doc(part, doc);
+
       if (opts.fields) {
         if (typeof opts.fields == 'string') opts.fields = opts.fields.split(' ');
         var _doc = {};
@@ -934,7 +947,7 @@ var Mongo_Service = function Mongo_Service() {
 
       if (typeof opts.replace == 'object' && Object.values(opts.replace).length) {
         for (var key in opts.replace) {
-          _this.replace(doc, key, opts.replace[key]);
+          replace(doc, key, opts.replace[key]);
         }
       }
 
@@ -942,7 +955,7 @@ var Mongo_Service = function Mongo_Service() {
         doc = JSON.parse(JSON.stringify(doc));
 
         for (var _key in opts.rewrite) {
-          _this.replace(doc, _key, opts.rewrite[_key]);
+          replace(doc, _key, opts.rewrite[_key]);
         }
       }
 
@@ -966,6 +979,10 @@ var Mongo_Service = function Mongo_Service() {
       doc = window.mongo._prepare_update(part, doc, opts);
       var url = '/api/' + part + '/update' + (opts.name || '');
       window.http.post(opts.url || url, doc, function (resp) {
+        if (resp) {
+          window.store.add_doc(part, doc);
+          window.render.call();
+        }
 
         if (resp && typeof cb == 'function') {
           cb(resp);
@@ -989,22 +1006,13 @@ var Mongo_Service = function Mongo_Service() {
       }
 
       if (typeof opts != 'object') opts = {};
-      doc = _this._prepare_update(part, doc, opts);
+      doc = window.mongo._prepare_update(part, doc, opts);
+      console.log(doc);
       var url = '/api/' + part + '/unique' + (opts.name || '');
       window.http.post(opts.url || url, doc, function (resp) {
         if (resp) {
-          _this.socket.emit('update', {
-            _id: doc._id,
-            part: part
-          });
-
-          var current_doc = data['obj' + part][doc._id];
-
-          for (var each in doc) {
-            current_doc[each] = doc[each];
-          }
-
-          _this.renew(part, current_doc);
+          window.store.add_doc(part, doc);
+          window.render.call();
         }
 
         if (resp && typeof cb == 'function') {
@@ -1048,8 +1056,7 @@ var Mongo_Service = function Mongo_Service() {
       var url = '/api/' + part + '/delete' + (opts.name || '');
       window.http.post(opts.url || url, doc, function (resp) {
         if (resp) {
-          console.log('here');
-          window.store.remove(doc);
+          window.store.remove_docs(part, doc);
         }
 
         if (resp && typeof cb == 'function') {
@@ -1064,76 +1071,20 @@ var Mongo_Service = function Mongo_Service() {
         window.http.get('/waw/newId', cb);
       }
     },
-    on: function (_on) {
-      function on(_x, _x2) {
-        return _on.apply(this, arguments);
-      }
-
-      on.toString = function () {
-        return _on.toString();
-      };
-
-      return on;
-    }(function (parts, cb) {
+    on: function on(parts, cb) {
       if (typeof parts == 'string') {
         parts = parts.split(" ");
       }
 
       for (var i = 0; i < parts.length; i++) {
-        if (!data['loaded' + parts[i]]) {
+        if (!_get[parts[i]]) {
           return setTimeout(function () {
-            on(parts, cb);
+            window.mongo.on(parts, cb);
           }, 100);
         }
       }
 
-      cb(data);
-    }),
-    renew: function renew(part, doc) {
-      if (!data['obj' + part][doc._id]) return _this.push(part, doc);
-
-      if (data['opts' + part].replace) {
-        for (var key in data['opts' + part].replace) {
-          replace(doc, key, data['opts' + part].replace[key]);
-        }
-      }
-    },
-    push: function push(part, doc) {
-      if (data['obj' + part][doc._id]) return _this.renew(part, doc);
-
-      if (data['opts' + part].replace) {
-        for (var key in _this.data['opts' + part].replace) {
-          _this.replace(doc, key, _this.data['opts' + part].replace[key]);
-        }
-      }
-
-      if (data['opts' + part].populate) {
-        var p = data['opts' + part].populate;
-
-        if (Array.isArray(p)) {
-          for (var i = 0; i < p.length; i++) {
-            if (typeof p == 'object' && p[i].field && p[i].part) {
-              populate(doc, p[i].field, p[i].part);
-            }
-          }
-        } else if (typeof p == 'object' && p.field && p.part) {
-          populate(doc, p.field, p.part);
-        }
-      }
-
-      data['arr' + part].push(doc);
-
-      if (data['opts' + part].sort) {
-        data['arr' + part].sort(data['opts' + part].sort);
-      }
-
-      data['obj' + part][doc._id] = doc;
-
-      if (Array.isArray(data['opts' + part].use)) {
-        for (var _i = 0; _i < data['opts' + part].use.length; _i++) {
-          data['obj' + part][doc[data['opts' + part].use[_i]]] = doc;
-        }
-      }
+      cb();
     }
   };
 };

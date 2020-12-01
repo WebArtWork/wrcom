@@ -3,7 +3,7 @@ import React from 'react'
 
 class ExamplePage extends React.Component{
 	state ={
-		email: 'sadloborchuk@asdgmail.com', 
+		email: 'lobo@agmail.com', 
 		pass: 'abs'
 	}
 
@@ -16,6 +16,11 @@ class ExamplePage extends React.Component{
 			}
 		});
 	}
+	AddPost =()=>{
+		let posts = window.mongo.get('post');
+		console.log(posts.all);
+		window.mongo.create('post', {name: 'Alex'});
+	}
 	render(){
 		// window.http.post('/api/user/update', {
 		// 	name: 'Alex',
@@ -24,8 +29,7 @@ class ExamplePage extends React.Component{
 
 		// user service
 		// let get = window.mongo.get('user');
-		// let users = get.all;
-		// console.log(users)
+		// console.log(get.all)
 
 
 		// let posts = window.mongo.get('post');
@@ -33,28 +37,46 @@ class ExamplePage extends React.Component{
 		// window.mongo.create('post', {name: 'Alex'});
 
 
-		// let posts = window.mongo.get('post');
-		// console.log(posts.all);
-		// window.mongo.delete('post',{_id: "5fc5111065154606d00579c3"});  //delete, but not onload date 
-
 		let posts = window.mongo.get('post');
 		console.log(posts.all);
-		window.mongo.update('post',{_id: "5fc4f56fba35c81ad4ef651e", name: "sadads"});
+		window.mongo.delete('post',{_id: "5fc65e0a9521ee2418f77288"});  //delete, but not onload date 
 
-		// let  user = window.mongo.fetch('user', {_id: '5faaa89a99e7ef126489a0ea'})
+		// let posts = window.mongo.get('post');
+		// console.log(posts.all);
+		// window.mongo.update('post',{_id: "5fc4f56fba35c81ad4ef651e", name: "asd322113sadsad"});
+
+		// let posts = window.mongo.get('post');
+		// console.log(posts.all);
+		// let url = "asdasd2wsaddw"+Date.now();
+		// window.mongo.unique('post', {
+		// 	_id: "5fc4f3f9ba35c81ad4ef651c",
+		// 	url: url});
+		// window.mongo.unique('post', {
+		// 	_id: "5fc5110e65154606d00579c1",
+		// 	url: url
+		// });
+
+		// window.mongo.on('post', ()=>{
+		// 	console.log('posts was loaded');
+		// })
+
+		// let  user = window.mongo.fetch('user', {_id: ''})
 		// console.log(user)
 
+		// window.http.get('/api/user/get', users=>{
+		// 	window.store.set_docs('user', users);
+		// });
 
-				// window.http.get('/api/user/get', users=>{
-				// 	window.store.set_docs('user', users);
-				// });
+		// //core 
+		// let a = window.core.afterWhile('user')
+		// console.log(a);
 
-		// admin users page
-		//let allusers = window.store.all('user');
-		//console.log(allusers);
+		//admin users page
+		// let allusers = window.store.all('user');
+		// console.log(allusers);
 
-		//let queryusers = window.store.query('user');
-		//console.log(queryusers);
+		// let queryusers = window.store.query('user');
+		// console.log(queryusers);
 
 		// let groupsusers = window.store.groups('user');
 		// console.log(groupsusers);
@@ -68,7 +90,9 @@ class ExamplePage extends React.Component{
 		//console.log(getUser);
 
 		return  (<div>
-			<button onClick ={this.AddUser}>Add User</button></div>)
+			<button onClick ={this.AddUser}>Add User</button>
+			<button onClick ={this.AddPost}>Add Post</button>
+			</div>)
 	}
 
 }

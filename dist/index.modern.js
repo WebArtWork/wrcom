@@ -11,7 +11,11 @@ const HTTP = () => {
         body: JSON.stringify(doc)
       }).then(resp => {
         return resp.json();
-      }).then(callback);
+      }).then(callback).then(resp => {
+        console.log('Created Type is sent successfully');
+      }).catch(err => {
+        console.log('Type send failed', err);
+      });
     },
     get: (url, callback = resp => {}, opts = {}) => {
       fetch(url, {
@@ -112,6 +116,22 @@ const Core_Service = router => {
   if (/windows phone/i.test(userAgent)) ; else if (/android/i.test(userAgent)) ; else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) ;
 
   window.core = {
+    afterWhile: (doc, _cb, time = 1000) => {
+      if (typeof doc == 'function') {
+        _cb = doc;
+        doc = 'common';
+      }
+
+      if (typeof doc == 'string') {
+        if (!_afterWhile[doc]) _afterWhile[doc] = {};
+        doc = _afterWhile[doc];
+      }
+
+      if (typeof _cb == 'function' && typeof time == 'number') {
+        clearTimeout(doc.__updateTimeout);
+        doc.__updateTimeout = setTimeout(_cb, time);
+      }
+    },
     _serial_process: (i, arr, callback) => {
       if (i >= arr.length) return callback();
       arr[i](() => {
@@ -208,22 +228,6 @@ const Core_Service = router => {
           if (--counter === 0) callback();
         }
       } else callback();
-    },
-    _afterWhile: (doc, _cb, time = 1000) => {
-      if (typeof doc == 'function') {
-        _cb = doc;
-        doc = 'common';
-      }
-
-      if (typeof doc == 'string') {
-        if (!_afterWhile[doc]) _afterWhile[doc] = {};
-        doc = _afterWhile[doc];
-      }
-
-      if (typeof _cb == 'function' && typeof time == 'number') {
-        clearTimeout(doc.__updateTimeout);
-        doc.__updateTimeout = setTimeout(_cb, time);
-      }
     },
     emit: (signal, doc = {}) => {
       if (!_cb[signal]) _cb[signal] = {};
@@ -373,7 +377,7 @@ function Store_Service(config) {
 
       window.store.set(type + '_docs', JSON.stringify(docs));
     },
-    _add_doc: (type, doc) => {
+    add_doc: (type, doc) => {
       if (!_data[type].by_id[doc[_id]]) {
         _data[type].by_id[doc[_id]] = doc;
       } else {
@@ -517,7 +521,7 @@ function Store_Service(config) {
         docs = JSON.parse(docs);
 
         for (let i = 0; i < docs.length; i++) {
-          window.store._add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
+          window.store.add_doc(collection.name, window.store.get_doc(collection.name, docs[i]));
         }
       });
     },
@@ -570,8 +574,7 @@ function Store_Service(config) {
       }
 
       window.store.set(type + '_' + doc[_id], JSON.stringify(doc));
-
-      window.store._add_doc(type, doc);
+      window.store.add_doc(type, doc);
 
       window.store._set_docs(type);
 
@@ -585,10 +588,14 @@ function Store_Service(config) {
 
     remove_doc(type, _id) {
       window.store.remove(type + '_' + _id);
-      delete data[type].by_id[_id];
-      store_docs(type);
+      delete _data[type].by_id[_id];
     },
 
+    remove_docs: (type, docs) => {
+      for (let i = 0; i < docs.length; i++) {
+        window.store.remove_doc(type, docs[i]);
+      }
+    },
     sortAscId: (id = '_id') => {
       return function (a, b) {
         if (a[id] > b[id]) return 1;else return -1;
@@ -697,6 +704,7 @@ function Store_Service(config) {
 }
 
 const Mongo_Service = () => {
+  const _get = {};
   window.mongo = {
     create: (part, doc = undefined, cb = undefined, opts = {}) => {
       if (typeof doc == 'function') {
@@ -716,6 +724,7 @@ const Mongo_Service = () => {
       doc.___created = true;
       window.http.post(opts.url || '/api/' + part + '/create', doc || {}, resp => {
         if (resp) {
+          window.store.add_doc(part, doc);
           if (typeof cb == 'function') cb(resp);
         } else if (typeof cb == 'function') {
           cb(false);
@@ -753,6 +762,7 @@ const Mongo_Service = () => {
 
       window.http.post(opts.url || url, opts.query || {}, server_doc => {
         cb(server_doc);
+        window.store.add_doc(part, server_doc);
         window.render.call();
       });
       return doc;
@@ -766,7 +776,9 @@ const Mongo_Service = () => {
       if (!opts) opts = {};
       let url = '/api/' + part + '/get' + (opts.name || '') + (opts.param || '');
       window.http.get(opts.url || url, resp => {
+        window.store.remove_docs(part, resp);
         window.store.set_docs(part, resp);
+        _get[part] = true;
       }, opts);
       return {
         all: window.store.all(part),
@@ -776,6 +788,8 @@ const Mongo_Service = () => {
       };
     },
     _prepare_update: (part, doc, opts) => {
+      window.store._add_doc(part, doc);
+
       if (opts.fields) {
         if (typeof opts.fields == 'string') opts.fields = opts.fields.split(' ');
         let _doc = {};
@@ -789,7 +803,7 @@ const Mongo_Service = () => {
 
       if (typeof opts.replace == 'object' && Object.values(opts.replace).length) {
         for (let key in opts.replace) {
-          undefined.replace(doc, key, opts.replace[key]);
+          replace(doc, key, opts.replace[key]);
         }
       }
 
@@ -797,7 +811,7 @@ const Mongo_Service = () => {
         doc = JSON.parse(JSON.stringify(doc));
 
         for (let key in opts.rewrite) {
-          undefined.replace(doc, key, opts.rewrite[key]);
+          replace(doc, key, opts.rewrite[key]);
         }
       }
 
@@ -813,6 +827,10 @@ const Mongo_Service = () => {
       doc = window.mongo._prepare_update(part, doc, opts);
       let url = '/api/' + part + '/update' + (opts.name || '');
       window.http.post(opts.url || url, doc, resp => {
+        if (resp) {
+          window.store.add_doc(part, doc);
+          window.render.call();
+        }
 
         if (resp && typeof cb == 'function') {
           cb(resp);
@@ -828,21 +846,13 @@ const Mongo_Service = () => {
       }
 
       if (typeof opts != 'object') opts = {};
-      doc = undefined._prepare_update(part, doc, opts);
+      doc = window.mongo._prepare_update(part, doc, opts);
+      console.log(doc);
       let url = '/api/' + part + '/unique' + (opts.name || '');
       window.http.post(opts.url || url, doc, resp => {
         if (resp) {
-          undefined.socket.emit('update', {
-            _id: doc._id,
-            part: part
-          });
-          let current_doc = data['obj' + part][doc._id];
-
-          for (let each in doc) {
-            current_doc[each] = doc[each];
-          }
-
-          undefined.renew(part, current_doc);
+          window.store.add_doc(part, doc);
+          window.render.call();
         }
 
         if (resp && typeof cb == 'function') {
@@ -878,8 +888,7 @@ const Mongo_Service = () => {
       let url = '/api/' + part + '/delete' + (opts.name || '');
       window.http.post(opts.url || url, doc, resp => {
         if (resp) {
-          console.log('here');
-          window.store.remove(doc);
+          window.store.remove_docs(part, doc);
         }
 
         if (resp && typeof cb == 'function') {
@@ -900,60 +909,14 @@ const Mongo_Service = () => {
       }
 
       for (let i = 0; i < parts.length; i++) {
-        if (!data['loaded' + parts[i]]) {
+        if (!_get[parts[i]]) {
           return setTimeout(() => {
-            on(parts, cb);
+            window.mongo.on(parts, cb);
           }, 100);
         }
       }
 
-      cb(data);
-    },
-    renew: (part, doc) => {
-      if (!data['obj' + part][doc._id]) return undefined.push(part, doc);
-
-      if (data['opts' + part].replace) {
-        for (let key in data['opts' + part].replace) {
-          replace(doc, key, data['opts' + part].replace[key]);
-        }
-      }
-    },
-    push: (part, doc) => {
-      if (data['obj' + part][doc._id]) return undefined.renew(part, doc);
-
-      if (data['opts' + part].replace) {
-        for (let key in undefined.data['opts' + part].replace) {
-          undefined.replace(doc, key, undefined.data['opts' + part].replace[key]);
-        }
-      }
-
-      if (data['opts' + part].populate) {
-        let p = data['opts' + part].populate;
-
-        if (Array.isArray(p)) {
-          for (let i = 0; i < p.length; i++) {
-            if (typeof p == 'object' && p[i].field && p[i].part) {
-              populate(doc, p[i].field, p[i].part);
-            }
-          }
-        } else if (typeof p == 'object' && p.field && p.part) {
-          populate(doc, p.field, p.part);
-        }
-      }
-
-      data['arr' + part].push(doc);
-
-      if (data['opts' + part].sort) {
-        data['arr' + part].sort(data['opts' + part].sort);
-      }
-
-      data['obj' + part][doc._id] = doc;
-
-      if (Array.isArray(data['opts' + part].use)) {
-        for (let i = 0; i < data['opts' + part].use.length; i++) {
-          data['obj' + part][doc[data['opts' + part].use[i]]] = doc;
-        }
-      }
+      cb();
     }
   };
 };

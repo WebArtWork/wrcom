@@ -21,6 +21,22 @@ export const Core_Service =(router)=> {
 	}else device = "web";
 
 	window.core ={
+	
+		afterWhile:(doc, _cb, time=1000)=>{
+			if(typeof doc == 'function'){
+				_cb = doc;
+				doc = 'common';
+			}
+			if(typeof doc == 'string'){
+				if(!_afterWhile[doc]) _afterWhile[doc]={};
+				doc = _afterWhile[doc];
+			}
+			if(typeof _cb == 'function' && typeof time == 'number'){
+				clearTimeout(doc.__updateTimeout);
+				doc.__updateTimeout = setTimeout(_cb, time);
+			}
+		},
+
 		_serial_process: (i, arr, callback)=>{
 			if(i>=arr.length) return callback();
 			arr[i](()=>{
@@ -108,22 +124,6 @@ export const Core_Service =(router)=> {
 				}
 			}else callback();
 		},
-
-		_afterWhile:(doc, _cb, time=1000)=>{
-			if(typeof doc == 'function'){
-				_cb = doc;
-				doc = 'common';
-			}
-			if(typeof doc == 'string'){
-				if(!_afterWhile[doc]) _afterWhile[doc]={};
-				doc = _afterWhile[doc];
-			}
-			if(typeof _cb == 'function' && typeof time == 'number'){
-				clearTimeout(doc.__updateTimeout);
-				doc.__updateTimeout = setTimeout(_cb, time);
-			}
-		},
-
 		emit:(signal, doc:any={})=>{
 			if(!_cb[signal]) _cb[signal] = {};
 			for (let each in _cb[signal]){
@@ -132,7 +132,6 @@ export const Core_Service =(router)=> {
 				}
 			}
 		},
-
 		on:(signal, _cb)=>{
 			let id = Math.floor(Math.random() * Date.now()) + 1;
 			if(_ids[id]) return on(signal, _cb);
@@ -144,7 +143,6 @@ export const Core_Service =(router)=> {
 			}
 		},
 		/* once Signal when something is ready */
-
 		done:(signal)=> {
 			_done_next[signal] = true;
 		},
