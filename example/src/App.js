@@ -12,7 +12,19 @@ class App  extends React.Component{
 		StoreService({
 			database: {
 				collections: [{
-					name: 'post'
+					name: 'post',
+					opts: {
+						query: {
+							name: (doc)=>{
+								return doc.name;
+							}
+						},
+						groups: {
+							name: (doc)=>{
+								return doc.name;
+							}
+						}
+					}
 				}, {
 					name: 'user',
 					opts: {

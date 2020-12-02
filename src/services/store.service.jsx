@@ -1,5 +1,4 @@
 export  function Store_Service(config){
-//export const Store_Service = function(config={}){
 	let _db:any = null;
 	let _data:any = {};
 	let _id = '_id';
@@ -108,20 +107,21 @@ export  function Store_Service(config){
 			window.store.set(type+'_docs', JSON.stringify(docs));
 		},
 		add_doc:(type, doc)=>{
+			let id = _data[type]._id || _id;
 			// replace existed
-			if(!_data[type].by_id[doc[_id]]){
-				_data[type].by_id[doc[_id]]=doc;
+			if(!_data[type].by_id[doc[id]]){
+				_data[type].by_id[doc[id]]=doc;
 			}else{	
 				for (let each in doc){
-					_data[type].by_id[doc[_id]][each] = doc[each];	
+					_data[type].by_id[doc[id]][each] = doc[each];	
 				}
 			}
 			// manage all
 			let add = true;
 			_data[type].all.forEach(selected=>{
-				if(selected[_id] == doc[_id]) add = false;
+				if(selected[id] == doc[id]) add = false;
 			});
-			if(add) _data[type].all.push(_data[type].by_id[doc[_id]]);
+			if(add) _data[type].all.push(_data[type].by_id[doc[id]]);
 			// sort all  
 			if(_data[type].sort) sort(_data[type].all, _data[type].sort);
 			// manage query
@@ -135,9 +135,9 @@ export  function Store_Service(config){
 					}					
 					add = true;
 					_data[type].query[key].forEach(selected=>{
-						if(selected[_id] == doc[_id]) add = false;
+						if(selected[id] == doc[id]) add = false;
 					});
-					if(add) _data[type].query[key].push(_data[type].by_id[doc[_id]]);
+					if(add) _data[type].query[key].push(_data[type].by_id[doc[id]]);
 					if(query.sort) sort(_data[type].query[key], query.sort);
 				}
 			};
@@ -157,9 +157,9 @@ export  function Store_Service(config){
 						}
 						add = true;
 						_data[type].groups[key][field].forEach(selected=>{
-							if(selected[_id] == doc[_id]) add = false;
+							if(selected[id] == doc[id]) add = false;
 						});
-						if(add) _data[type].groups[key][field].push(_data[type].by_id[doc[_id]]);
+						if(add) _data[type].groups[key][field].push(_data[type].by_id[doc[id]]);
 						if(groups.sort) sort(_data[type].groups[key][field], groups.sort);
 					}
 					set(groups.field(doc, (field)=>{
@@ -223,7 +223,7 @@ export  function Store_Service(config){
 						continue;
 					}
 					collection.groups[key] = {};
-				}
+				}	
 			};
 
 			_data[collection.name] = collection;
@@ -239,19 +239,21 @@ export  function Store_Service(config){
 		by_id: (type:string, doc:object)=>{return _data[type].by_id;},
 		query: (type:string, doc:object)=>{return _data[type].query;},
 		groups: (type:string, doc:object)=>{return _data[type].groups;},
-		get_doc:(type:string, _id:string)=>{
-			if(!_data[type].by_id[_id]){
-				_data[type].by_id[_id] = {};
-				_data[type].by_id[_id][_id] = _id;
-				window.store.get(type+'_'+_id, doc=>{
+		get_doc:(type:string, doc_id:string)=>{
+			let id = _data[type]._id || _id;
+			if(!_data[type].by_id[doc_id]){
+				_data[type].by_id[doc_id] = {};
+				_data[type].by_id[doc_id][id] = doc_id;
+				window.store.get(type+'_'+doc_id, doc=>{
 					if(!doc) return;
 					doc = JSON.parse(doc);
 					for (let each in doc){
-						_data[type].by_id[_id][each] = doc[each] 
+						_data[type].by_id[doc_id][each] = doc[each] 
 					}
 				});					
 			}
-			return _data[type].by_id[_id];
+			//	console.log(_data[type])
+			return _data[type].by_id[doc_id];
 		},
 		_replace:(doc, each, exe)=>{
 			doc[each] = exe(doc, value=>{
@@ -281,14 +283,29 @@ export  function Store_Service(config){
 				window.store.set_doc(type, docs[i])
 			}
 		},
-		remove_doc(type:string, _id:string){
-			window.store.remove(type+'_'+_id);
-			delete _data[type].by_id[_id];
-		},
-		remove_docs: (type:string, docs:any)=>{
-			for (let i = 0; i < docs.length; i++) {
-				window.store.remove_doc(type, docs[i])
+		remove_doc(type:string, doc_id:string){
+			//_data == _collection
+			let id = _data[type]._id || _id;
+			window.store.remove(type+'_'+doc_id);
+			// splice from all 
+			for (var i = _data[type].all.length - 1; i >= 0; i--) {
+				if(_data[type].all[i][id] == doc_id){
+					_data[type].all.splice(i, 1);
+				}
 			}
+			// check all query, remove from each
+			for (let i = _data[type].query.length - 1; i >= 0; i--){
+				if( _data[type].query[i][id] == doc_id){
+					_data[type].query.splice(i, 1);
+				}
+			}
+			// check all groups, remove from each
+			for (let i = _data[type].groups.length - 1; i >= 0; i--){
+				if( _data[type].groups[i][id] == doc_id){
+					_data[type].groups.splice(i, 1);
+				}
+			}
+			delete _data[type].by_id[_id];
 		},
 		/*Sorts Management*/
 		sortAscId:(id='_id')=>{

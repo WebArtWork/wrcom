@@ -378,21 +378,23 @@ function Store_Service(config) {
       window.store.set(type + '_docs', JSON.stringify(docs));
     },
     add_doc: (type, doc) => {
-      if (!_data[type].by_id[doc[_id]]) {
-        _data[type].by_id[doc[_id]] = doc;
+      let id = _data[type]._id || _id;
+
+      if (!_data[type].by_id[doc[id]]) {
+        _data[type].by_id[doc[id]] = doc;
       } else {
         for (let each in doc) {
-          _data[type].by_id[doc[_id]][each] = doc[each];
+          _data[type].by_id[doc[id]][each] = doc[each];
         }
       }
 
       let add = true;
 
       _data[type].all.forEach(selected => {
-        if (selected[_id] == doc[_id]) add = false;
+        if (selected[id] == doc[id]) add = false;
       });
 
-      if (add) _data[type].all.push(_data[type].by_id[doc[_id]]);
+      if (add) _data[type].all.push(_data[type].by_id[doc[id]]);
       if (_data[type].sort) sort(_data[type].all, _data[type].sort);
 
       if (_data[type].opts.query) {
@@ -408,10 +410,10 @@ function Store_Service(config) {
           add = true;
 
           _data[type].query[key].forEach(selected => {
-            if (selected[_id] == doc[_id]) add = false;
+            if (selected[id] == doc[id]) add = false;
           });
 
-          if (add) _data[type].query[key].push(_data[type].by_id[doc[_id]]);
+          if (add) _data[type].query[key].push(_data[type].by_id[doc[id]]);
           if (query.sort) sort(_data[type].query[key], query.sort);
         }
       }
@@ -436,10 +438,10 @@ function Store_Service(config) {
             add = true;
 
             _data[type].groups[key][field].forEach(selected => {
-              if (selected[_id] == doc[_id]) add = false;
+              if (selected[id] == doc[id]) add = false;
             });
 
-            if (add) _data[type].groups[key][field].push(_data[type].by_id[doc[_id]]);
+            if (add) _data[type].groups[key][field].push(_data[type].by_id[doc[id]]);
             if (groups.sort) sort(_data[type].groups[key][field], groups.sort);
           };
 
@@ -537,21 +539,23 @@ function Store_Service(config) {
     groups: (type, doc) => {
       return _data[type].groups;
     },
-    get_doc: (type, _id) => {
-      if (!_data[type].by_id[_id]) {
-        _data[type].by_id[_id] = {};
-        _data[type].by_id[_id][_id] = _id;
-        window.store.get(type + '_' + _id, doc => {
+    get_doc: (type, doc_id) => {
+      let id = _data[type]._id || _id;
+
+      if (!_data[type].by_id[doc_id]) {
+        _data[type].by_id[doc_id] = {};
+        _data[type].by_id[doc_id][id] = doc_id;
+        window.store.get(type + '_' + doc_id, doc => {
           if (!doc) return;
           doc = JSON.parse(doc);
 
           for (let each in doc) {
-            _data[type].by_id[_id][each] = doc[each];
+            _data[type].by_id[doc_id][each] = doc[each];
           }
         });
       }
 
-      return _data[type].by_id[_id];
+      return _data[type].by_id[doc_id];
     },
     _replace: (doc, each, exe) => {
       doc[each] = exe(doc, value => {
@@ -586,16 +590,31 @@ function Store_Service(config) {
       }
     },
 
-    remove_doc(type, _id) {
-      window.store.remove(type + '_' + _id);
+    remove_doc(type, doc_id) {
+      let id = _data[type]._id || _id;
+      window.store.remove(type + '_' + doc_id);
+
+      for (var i = _data[type].all.length - 1; i >= 0; i--) {
+        if (_data[type].all[i][id] == doc_id) {
+          _data[type].all.splice(i, 1);
+        }
+      }
+
+      for (let _i = _data[type].query.length - 1; _i >= 0; _i--) {
+        if (_data[type].query[_i][id] == doc_id) {
+          _data[type].query.splice(_i, 1);
+        }
+      }
+
+      for (let _i2 = _data[type].groups.length - 1; _i2 >= 0; _i2--) {
+        if (_data[type].groups[_i2][id] == doc_id) {
+          _data[type].groups.splice(_i2, 1);
+        }
+      }
+
       delete _data[type].by_id[_id];
     },
 
-    remove_docs: (type, docs) => {
-      for (let i = 0; i < docs.length; i++) {
-        window.store.remove_doc(type, docs[i]);
-      }
-    },
     sortAscId: (id = '_id') => {
       return function (a, b) {
         if (a[id] > b[id]) return 1;else return -1;
@@ -776,7 +795,6 @@ const Mongo_Service = () => {
       if (!opts) opts = {};
       let url = '/api/' + part + '/get' + (opts.name || '') + (opts.param || '');
       window.http.get(opts.url || url, resp => {
-        window.store.remove_docs(part, resp);
         window.store.set_docs(part, resp);
         _get[part] = true;
       }, opts);
@@ -788,7 +806,7 @@ const Mongo_Service = () => {
       };
     },
     _prepare_update: (part, doc, opts) => {
-      window.store._add_doc(part, doc);
+      window.store.add_doc(part, doc);
 
       if (opts.fields) {
         if (typeof opts.fields == 'string') opts.fields = opts.fields.split(' ');
@@ -888,7 +906,7 @@ const Mongo_Service = () => {
       let url = '/api/' + part + '/delete' + (opts.name || '');
       window.http.post(opts.url || url, doc, resp => {
         if (resp) {
-          window.store.remove_docs(part, doc);
+          window.store.remove_doc(part, doc._id);
         }
 
         if (resp && typeof cb == 'function') {

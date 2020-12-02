@@ -38,12 +38,12 @@ class ExamplePage extends React.Component{
 
 
 		let posts = window.mongo.get('post');
-		console.log(posts.all);
-		window.mongo.delete('post',{_id: "5fc65e0a9521ee2418f77288"});  //delete, but not onload date 
+		console.log(posts.groups);
+		window.mongo.delete('post', {_id: "5fc781653a8df812900717b8"}); 
 
-		// let posts = window.mongo.get('post');
-		// console.log(posts.all);
-		// window.mongo.update('post',{_id: "5fc4f56fba35c81ad4ef651e", name: "asd322113sadsad"});
+		// let posts_update = window.mongo.get('post');
+		// console.log(posts_update.all);
+		// window.mongo.update('post',{_id: "5fc781653a8df812900717b9", name: "Lego"});
 
 		// let posts = window.mongo.get('post');
 		// console.log(posts.all);
@@ -65,21 +65,31 @@ class ExamplePage extends React.Component{
 
 		// window.http.get('/api/user/get', users=>{
 		// 	window.store.set_docs('user', users);
-		// });
 
 		// //core 
-		// let a = window.core.afterWhile('user')
-		// console.log(a);
+		// 	console.log('success');
+		// 	window.core.afterWhile(()=>{
+		// 		console.log('success');
+		// 	})
+		// });
+		
+
 
 		//admin users page
-		// let allusers = window.store.all('user');
-		// console.log(allusers);
+		// let all_users = window.store.all('user');
+		// console.log(all_users);
 
-		// let queryusers = window.store.query('user');
-		// console.log(queryusers);
+		// let by_id_users = window.store.by_id('user');
+		// console.log(by_id_users);
 
-		// let groupsusers = window.store.groups('user');
-		// console.log(groupsusers);
+		// let query_users = window.store.query('user');
+		// console.log(query_users);
+
+		// let groups_users = window.store.groups('user');
+		// console.log(groups_users);
+
+		// console.log(posts.all);
+		// window.mongo.update('post',{_id: "5fc4f56fba35c81ad4ef651e", name: "asd322113sadsad"});
 
 		// let tab = window.hash.get('tab') || 'Home';
 		// console.log(tab);

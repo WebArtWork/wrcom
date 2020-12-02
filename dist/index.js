@@ -481,21 +481,23 @@ function Store_Service(config) {
       window.store.set(type + '_docs', JSON.stringify(docs));
     },
     add_doc: function add_doc(type, doc) {
-      if (!_data[type].by_id[doc[_id]]) {
-        _data[type].by_id[doc[_id]] = doc;
+      var id = _data[type]._id || _id;
+
+      if (!_data[type].by_id[doc[id]]) {
+        _data[type].by_id[doc[id]] = doc;
       } else {
         for (var each in doc) {
-          _data[type].by_id[doc[_id]][each] = doc[each];
+          _data[type].by_id[doc[id]][each] = doc[each];
         }
       }
 
       var add = true;
 
       _data[type].all.forEach(function (selected) {
-        if (selected[_id] == doc[_id]) add = false;
+        if (selected[id] == doc[id]) add = false;
       });
 
-      if (add) _data[type].all.push(_data[type].by_id[doc[_id]]);
+      if (add) _data[type].all.push(_data[type].by_id[doc[id]]);
       if (_data[type].sort) sort(_data[type].all, _data[type].sort);
 
       if (_data[type].opts.query) {
@@ -511,10 +513,10 @@ function Store_Service(config) {
           add = true;
 
           _data[type].query[key].forEach(function (selected) {
-            if (selected[_id] == doc[_id]) add = false;
+            if (selected[id] == doc[id]) add = false;
           });
 
-          if (add) _data[type].query[key].push(_data[type].by_id[doc[_id]]);
+          if (add) _data[type].query[key].push(_data[type].by_id[doc[id]]);
           if (query.sort) sort(_data[type].query[key], query.sort);
         }
       }
@@ -539,10 +541,10 @@ function Store_Service(config) {
             add = true;
 
             _data[type].groups[_key][field].forEach(function (selected) {
-              if (selected[_id] == doc[_id]) add = false;
+              if (selected[id] == doc[id]) add = false;
             });
 
-            if (add) _data[type].groups[_key][field].push(_data[type].by_id[doc[_id]]);
+            if (add) _data[type].groups[_key][field].push(_data[type].by_id[doc[id]]);
             if (groups.sort) sort(_data[type].groups[_key][field], groups.sort);
           };
 
@@ -652,21 +654,23 @@ function Store_Service(config) {
     groups: function groups(type, doc) {
       return _data[type].groups;
     },
-    get_doc: function get_doc(type, _id) {
-      if (!_data[type].by_id[_id]) {
-        _data[type].by_id[_id] = {};
-        _data[type].by_id[_id][_id] = _id;
-        window.store.get(type + '_' + _id, function (doc) {
+    get_doc: function get_doc(type, doc_id) {
+      var id = _data[type]._id || _id;
+
+      if (!_data[type].by_id[doc_id]) {
+        _data[type].by_id[doc_id] = {};
+        _data[type].by_id[doc_id][id] = doc_id;
+        window.store.get(type + '_' + doc_id, function (doc) {
           if (!doc) return;
           doc = JSON.parse(doc);
 
           for (var each in doc) {
-            _data[type].by_id[_id][each] = doc[each];
+            _data[type].by_id[doc_id][each] = doc[each];
           }
         });
       }
 
-      return _data[type].by_id[_id];
+      return _data[type].by_id[doc_id];
     },
     _replace: function _replace(doc, each, exe) {
       doc[each] = exe(doc, function (value) {
@@ -700,14 +704,29 @@ function Store_Service(config) {
         window.store.set_doc(type, docs[i]);
       }
     },
-    remove_doc: function remove_doc(type, _id) {
-      window.store.remove(type + '_' + _id);
-      delete _data[type].by_id[_id];
-    },
-    remove_docs: function remove_docs(type, docs) {
-      for (var i = 0; i < docs.length; i++) {
-        window.store.remove_doc(type, docs[i]);
+    remove_doc: function remove_doc(type, doc_id) {
+      var id = _data[type]._id || _id;
+      window.store.remove(type + '_' + doc_id);
+
+      for (var i = _data[type].all.length - 1; i >= 0; i--) {
+        if (_data[type].all[i][id] == doc_id) {
+          _data[type].all.splice(i, 1);
+        }
       }
+
+      for (var _i2 = _data[type].query.length - 1; _i2 >= 0; _i2--) {
+        if (_data[type].query[_i2][id] == doc_id) {
+          _data[type].query.splice(_i2, 1);
+        }
+      }
+
+      for (var _i3 = _data[type].groups.length - 1; _i3 >= 0; _i3--) {
+        if (_data[type].groups[_i3][id] == doc_id) {
+          _data[type].groups.splice(_i3, 1);
+        }
+      }
+
+      delete _data[type].by_id[_id];
     },
     sortAscId: function sortAscId(id) {
       if (id === void 0) {
@@ -920,7 +939,6 @@ var Mongo_Service = function Mongo_Service() {
       if (!opts) opts = {};
       var url = '/api/' + part + '/get' + (opts.name || '') + (opts.param || '');
       window.http.get(opts.url || url, function (resp) {
-        window.store.remove_docs(part, resp);
         window.store.set_docs(part, resp);
         _get[part] = true;
       }, opts);
@@ -932,7 +950,7 @@ var Mongo_Service = function Mongo_Service() {
       };
     },
     _prepare_update: function _prepare_update(part, doc, opts) {
-      window.store._add_doc(part, doc);
+      window.store.add_doc(part, doc);
 
       if (opts.fields) {
         if (typeof opts.fields == 'string') opts.fields = opts.fields.split(' ');
@@ -1056,7 +1074,7 @@ var Mongo_Service = function Mongo_Service() {
       var url = '/api/' + part + '/delete' + (opts.name || '');
       window.http.post(opts.url || url, doc, function (resp) {
         if (resp) {
-          window.store.remove_docs(part, doc);
+          window.store.remove_doc(part, doc._id);
         }
 
         if (resp && typeof cb == 'function') {

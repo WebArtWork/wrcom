@@ -68,10 +68,11 @@ export const Mongo_Service =()=>{
 			if(!opts) opts={};
 			let url = '/api/' + part + '/get'+(opts.name || '')+(opts.param||'');
 			window.http.get(opts.url || url , resp => {
-				window.store.remove_docs(part, resp);
 				window.store.set_docs(part, resp);
+
 				_get[part] = true;
 			}, opts);
+
 			return {
 				all: window.store.all(part),
 				by_id: window.store.by_id(part),
@@ -80,7 +81,7 @@ export const Mongo_Service =()=>{
 			};
 		},
 		_prepare_update:(part, doc, opts)=>{
-		 window.store._add_doc(part, doc)
+		 window.store.add_doc(part, doc)
 		 if(opts.fields){
 		 	if(typeof opts.fields == 'string') opts.fields = opts.fields.split(' ');
 		 	let _doc = {};
@@ -165,7 +166,7 @@ export const Mongo_Service =()=>{
 
 			window.http.post(opts.url || url, doc, resp => {
 				if (resp) {
-					window.store.remove_docs(part, doc);
+					window.store.remove_doc(part, doc._id);
 				 }
 				 if (resp && typeof cb == 'function') {
 				 	cb(resp);

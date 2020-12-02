@@ -36,7 +36,6 @@ export const Core_Service =(router)=> {
 				doc.__updateTimeout = setTimeout(_cb, time);
 			}
 		},
-
 		_serial_process: (i, arr, callback)=>{
 			if(i>=arr.length) return callback();
 			arr[i](()=>{
